@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { authClient } from "@/lib/auth-client"; // আপনার প্রোজেক্টের সঠিক পাথ ব্যবহার করুন
+import { authClient } from "@/lib/auth-client"; 
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {

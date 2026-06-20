@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 import { EyeFilledIcon, EyeSlashFilledIcon } from "@/components/Icons";
-import { authClient, signIn } from "@/lib/auth-client";
+import { signIn } from "@/lib/auth-client";
+
 
 export default function LoginPage() {
     const router = useRouter();

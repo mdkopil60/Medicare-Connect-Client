@@ -13,7 +13,6 @@ export default function RegisterPage() {
     const [gender, setGender] = useState("male");
     const [specialization, setSpecialization] = useState("cardiology");
     const [loading, setLoading] = useState(false);
-
     const [isPassVisible, setIsPassVisible] = useState(false);
     const [isConfirmPassVisible, setIsConfirmPassVisible] = useState(false);
 
@@ -24,31 +23,24 @@ export default function RegisterPage() {
         reset,
         formState: { errors },
     } = useForm();
-
     const password = watch("password", "");
-
     const passwordRegex =
         /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,}$/;
-
     const onSubmit = async (data) => {
         try {
             setLoading(true);
-
-
             const result = await signUp.email({
                 name: data.name,
                 email: data.email,
                 password: data.password,
                 image: data.photo,
+                role: role, 
             });
-
             if (result?.error) {
                 toast.error(result.error.message);
                 return;
             }
-
             const user = result?.data?.user;
-
             await fetch("/api/users", {
                 method: "POST",
                 headers: {
@@ -60,7 +52,6 @@ export default function RegisterPage() {
                     gender,
                     phone: data.phone,
                     photo: data.photo,
-
                     ...(role === "Doctor" && {
                         specialization,
                         qualification: data.qualification,
@@ -70,6 +61,7 @@ export default function RegisterPage() {
                     }),
                 }),
             });
+
             toast.success("Registration Successful!");
             reset();
         } catch (error) {
