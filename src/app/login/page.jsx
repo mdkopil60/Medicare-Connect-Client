@@ -11,46 +11,34 @@ import { authClient, signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
     const router = useRouter();
-
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
-
     const [formData, setFormData] = useState({
         email: "",
         password: "",
     });
-
     const [errors, setErrors] = useState({});
-
     const toggleVisibility = (e) => {
         e.preventDefault();
         setIsVisible(!isVisible);
     };
-
     const handleChange = (e) => {
         const { name, value } = e.target;
-
-
         setFormData((prev) => ({
             ...prev,
             [name]: value,
         }));
-
         if (errors[name]) {
             setErrors((prev) => ({
                 ...prev,
                 [name]: "",
             }));
         }
-
-
     };
 
     const validateForm = () => {
         const tempErrors = {};
-
-
         if (!formData.email) {
             tempErrors.email = "Email is required";
         }
@@ -58,38 +46,28 @@ export default function LoginPage() {
         if (!formData.password) {
             tempErrors.password = "Password is required";
         }
-
         setErrors(tempErrors);
-
         return Object.keys(tempErrors).length === 0;
 
 
     };
-
     const handleEmailLogin = async (e) => {
         e.preventDefault();
-
-
         if (!validateForm()) return;
-
         setLoading(true);
-
         try {
             const result = await signIn.email({
                 email: formData.email,
                 password: formData.password,
             });
-
             if (result?.error) {
                 toast.error(result.error.message);
                 return;
             }
-
             toast.success("Login Successful!");
             router.push("/");
             router.refresh();
         } catch (error) {
-            console.error(error);
             toast.error("Login Failed");
         } finally {
             setLoading(false);
@@ -101,33 +79,26 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         try {
             setGoogleLoading(true);
-
             await authClient.signIn.social({
                 provider: "google",
                 callbackURL: "/",
             });
         } catch (error) {
-            console.error(error);
             toast.error("Google Login Failed");
             setGoogleLoading(false);
         }
-
-
     };
 
     return (<div className="min-h-screen flex items-center justify-center bg-[#f4f7f9] px-4 py-12"> <Card className="max-w-md w-full p-8 shadow-[0_15px_40px_rgba(0,0,0,0.03)] border border-slate-100 bg-white rounded-[26px]">
-
-        ```
+ 
         <div className="flex flex-col gap-1 items-center justify-center pb-6 text-center">
             <h2 className="text-[26px] font-bold text-[#0f2942] tracking-tight">
                 Welcome Back
             </h2>
-
             <p className="text-sm text-slate-400 font-medium">
                 Access your healthcare portal
             </p>
         </div>
-
         <div className="mt-2">
             <Button
                 variant="flat"

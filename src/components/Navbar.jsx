@@ -3,18 +3,32 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { authClient } from "@/lib/auth-client"; // আপনার প্রোজেক্টের সঠিক পাথ ব্যবহার করুন
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const router = useRouter();
 
-    // Hydration error বন্ধ করার জন্য mounted চেক প্রয়োজন
+    const { data: session, isPending } = authClient.useSession();
+    const user = session?.user;
+
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const user = null;
+    const handleLogout = async () => {
+        await authClient.signOut({
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/login");
+                    setIsMenuOpen(false);
+                },
+            },
+        });
+    };
 
     return (
         <nav className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-md sticky top-0 z-50 transition-colors duration-300">
@@ -26,8 +40,6 @@ export default function Navbar() {
                         <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             MediCare Connect
                         </Link>
-
-                        {/* Dark / Light Mode Button */}
                         {mounted && (
                             <button
                                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -50,36 +62,43 @@ export default function Navbar() {
 
                     {/* Right Side (Auth Buttons) */}
                     <div className="hidden md:flex items-center gap-4">
-                        {user ? (
+                        {!isPending && user ? (
                             <div className="dropdown dropdown-end relative group">
                                 <img
-                                    src={user.photoURL || "https://i.pravatar.cc/150"}
+                                    src={user.image || "https://i.pravatar.cc/150"}
                                     alt="Profile"
-                                    className="w-10 h-10 rounded-full border-2 border-blue-500 cursor-pointer"
+                                    className="w-10 h-10 rounded-full border-2 border-blue-500 cursor-pointer object-cover"
                                 />
-                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                                    <p className="font-semibold px-3 py-2">{user.name}</p>
+                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                                    <p className="font-semibold px-3 py-2 truncate">{user.name}</p>
                                     <hr className="dark:border-gray-700" />
                                     <Link href="/profile" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Profile</Link>
                                     <Link href="/dashboard" className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Dashboard</Link>
-                                    <button className="w-full text-left px-3 py-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded">Logout</button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-3 py-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded"
+                                    >
+                                        Logout
+                                    </button>
                                 </div>
                             </div>
                         ) : (
-                            <>
-                                <Link
-                                    href="/login"
-                                    className="px-4 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 transition"
-                                >
-                                    Login
-                                </Link>
-                                <Link
-                                    href="/register"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                >
-                                    Register
-                                </Link>
-                            </>
+                            !isPending && (
+                                <>
+                                    <Link
+                                        href="/login"
+                                        className="px-4 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 transition"
+                                    >
+                                        Login
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                    >
+                                        Register
+                                    </Link>
+                                </>
+                            )
                         )}
                     </div>
 
@@ -103,28 +122,30 @@ export default function Navbar() {
 
                         <hr className="dark:border-gray-700" />
 
-                        {user ? (
+                        {!isPending && user ? (
                             <>
                                 <Link href="/profile" onClick={() => setIsMenuOpen(false)}>Profile</Link>
-                                <button className="text-left text-red-500">Logout</button>
+                                <button onClick={handleLogout} className="text-left text-red-500">Logout</button>
                             </>
                         ) : (
-                            <div className="flex flex-col gap-2 pt-2">
-                                <Link
-                                    href="/login"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="text-center py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg"
-                                >
-                                    Login
-                                </Link>
-                                <Link
-                                    href="/register"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="text-center py-2 bg-blue-600 text-white rounded-lg"
-                                >
-                                    Register
-                                </Link>
-                            </div>
+                            !isPending && (
+                                <div className="flex flex-col gap-2 pt-2">
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="text-center py-2 border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg"
+                                    >
+                                        Login
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="text-center py-2 bg-blue-600 text-white rounded-lg"
+                                    >
+                                        Register
+                                    </Link>
+                                </div>
+                            )
                         )}
                     </div>
                 )}

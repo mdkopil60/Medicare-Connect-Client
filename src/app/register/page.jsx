@@ -70,18 +70,13 @@ export default function RegisterPage() {
                     }),
                 }),
             });
-            console.log(data);
-
             toast.success("Registration Successful!");
             reset();
         } catch (error) {
-            console.error(error);
             toast.error("Registration Failed");
         } finally {
             setLoading(false);
         }
-
-
     };
 
     const inputClassNames = {
