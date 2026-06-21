@@ -10,6 +10,7 @@ import { EyeFilledIcon, EyeSlashFilledIcon } from "@/components/Icons";
 import { signIn } from "@/lib/auth-client";
 
 
+
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);

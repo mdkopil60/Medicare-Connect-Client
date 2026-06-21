@@ -18,11 +18,11 @@ const DashboardSidebar = ({ isOpen, onClose }) => {
     const pathname = usePathname();
 
     const menuItems = [
-        { name: 'Dashboard Overview', path: '/dashboard/overview', icon: <LayoutDashboard size={18} /> },
-        { name: 'My Profile', path: '/dashboard/profile', icon: <User size={18} /> },
-        { name: 'My Appointments', path: '/dashboard/appointments', icon: <CalendarDays size={18} /> },
-        { name: 'Payment History', path: '/dashboard/payments', icon: <CreditCard size={18} /> },
-        { name: 'My Reviews', path: '/dashboard/reviews', icon: <Star size={18} /> },
+        { name: 'Dashboard Overview', path: '/dashboard/patient', icon: <LayoutDashboard size={18} /> },
+        { name: 'My Profile', path: '/dashboard/patient/profile', icon: <User size={18} /> },
+        { name: 'My Appointments', path: '/dashboard/patient/appointments', icon: <CalendarDays size={18} /> },
+        { name: 'Payment History', path: '/dashboard/patient/payments', icon: <CreditCard size={18} /> },
+        { name: 'My Reviews', path: '/dashboard/patient/reviews', icon: <Star size={18} /> },
     ];
 
     const renderNavLink = (item, isMobile = false) => {
