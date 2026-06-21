@@ -6,7 +6,8 @@ import { useForm } from "react-hook-form";
 import toast, { Toaster } from "react-hot-toast";
 import { Card, Input, Button } from "@heroui/react";
 import { EyeFilledIcon, EyeSlashFilledIcon } from "@/components/Icons";
-import { signIn, signUp } from "@/lib/auth-client";
+import { signUp } from "@/lib/auth-client";
+
 
 export default function RegisterPage() {
     const [role, setRole] = useState("Patient");
