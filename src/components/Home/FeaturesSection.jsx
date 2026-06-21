@@ -84,7 +84,7 @@ export default function FeaturesSection() {
                     <span className="text-xs font-bold tracking-wider uppercase bg-primary-50 text-primary-600 px-3 py-1 rounded-full dark:bg-primary-950/50">
                         Features
                     </span>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight mt-4 bg-gradient-to-r from-default-900 via-primary-600 to-secondary-500 bg-clip-text text-transparent">
+                    <h2 className="text-4xl text-black md:text-5xl font-black tracking-tight mt-4 bg-gradient-to-r from-default-900 via-primary-600 to-secondary-500 bg-clip-text text-transparent">
                         Why Choose MediCare Connect?
                     </h2>
                     <p className="text-default-500 text-lg mt-4 max-w-2xl mx-auto balance">

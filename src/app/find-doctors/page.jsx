@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-// import api from '@/lib/api';
+import axios from 'axios';
 import { FaSearch, FaStar } from 'react-icons/fa';
 
 export default function FindDoctorsPage() {
@@ -25,11 +25,11 @@ export default function FindDoctorsPage() {
             if (specialization) params.set('specialization', specialization);
             if (sort) params.set('sort', sort);
 
-            const res = await api.get(`/doctors?${params.toString()}`);
-            setDoctors(res.data.doctors);
-            setTotalPages(res.data.totalPages);
-        } catch {
-            // silent
+            const res = await axios.get(`http://localhost:5000/doctors?${params.toString()}`);
+            setDoctors(res.data.doctors || []);
+            setTotalPages(res.data.totalPages || 1);
+        } catch (error) {
+            console.error("Error fetching doctors:", error);
         }
         setLoading(false);
     };
@@ -57,13 +57,13 @@ export default function FindDoctorsPage() {
                             placeholder="Search doctors..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900"
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
                         />
                     </div>
                     <select
                         value={specialization}
                         onChange={(e) => { setSpecialization(e.target.value); setPage(1); }}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900"
+                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
                     >
                         <option value="">All Specializations</option>
                         {specializations.map((s) => (
@@ -73,7 +73,7 @@ export default function FindDoctorsPage() {
                     <select
                         value={sort}
                         onChange={(e) => { setSort(e.target.value); setPage(1); }}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900"
+                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
                     >
                         <option value="">Sort By</option>
                         <option value="fee_asc">Fee: Low to High</option>
@@ -92,7 +92,7 @@ export default function FindDoctorsPage() {
                     <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto" />
                 </div>
             ) : doctors.length === 0 ? (
-                <p className="text-center text-gray-500 py-20">No doctors found</p>
+                <p className="text-center text-gray-500 py-20 dark:text-gray-400">No doctors found</p>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {doctors.map((doctor, i) => (
@@ -101,33 +101,35 @@ export default function FindDoctorsPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6"
+                            className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col justify-between"
                         >
-                            <div className="flex items-center gap-4 mb-4">
-                                <img
-                                    src={doctor.userId?.photo || doctor.profileImage || `https://ui-avatars.com/api/?name=${doctor.doctorName}&background=0d9488&color=fff`}
-                                    alt={doctor.doctorName}
-                                    className="w-16 h-16 rounded-full object-cover"
-                                />
-                                <div>
-                                    <h3 className="font-semibold text-gray-800 dark:text-white">{doctor.doctorName}</h3>
-                                    <p className="text-sm text-teal-600">{doctor.specialization}</p>
-                                    {doctor.averageRating !== undefined && (
-                                        <div className="flex items-center gap-1 text-sm">
-                                            <FaStar className="text-yellow-400" />
-                                            <span>{doctor.averageRating.toFixed(1)}</span>
-                                            <span className="text-gray-400">({doctor.totalReviews})</span>
-                                        </div>
-                                    )}
+                            <div>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <img
+                                        src={doctor.userId?.photo || doctor.profileImage || `https://ui-avatars.com/api/?name=${doctor.doctorName}&background=0d9488&color=fff`}
+                                        alt={doctor.doctorName}
+                                        className="w-16 h-16 rounded-full object-cover"
+                                    />
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800 dark:text-white">{doctor.doctorName}</h3>
+                                        <p className="text-sm text-teal-600 font-medium">{doctor.specialization}</p>
+                                        {doctor.averageRating !== undefined && (
+                                            <div className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                                                <FaStar className="text-yellow-400" />
+                                                <span>{doctor.averageRating.toFixed(1)}</span>
+                                                <span className="text-gray-400">({doctor.totalReviews || 0})</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                    <span>{doctor.experience} years exp</span>
+                                    <span className="text-teal-600 font-semibold dark:text-teal-400">${doctor.consultationFee}</span>
                                 </div>
                             </div>
-                            <div className="flex justify-between text-sm text-gray-500 mb-4">
-                                <span>{doctor.experience} years exp</span>
-                                <span className="text-teal-600 font-semibold">${doctor.consultationFee}</span>
-                            </div>
                             <Link
-                                href={`/doctors/${doctor._id}`}
-                                className="block text-center py-2 border border-teal-600 text-teal-600 rounded-lg hover:bg-teal-600 hover:text-white transition-colors"
+                                href={`/find-doctors/${doctor._id}`}
+                                className="block text-center py-2 border border-teal-600 text-teal-600 rounded-lg hover:bg-teal-600 hover:text-white transition-colors mt-auto font-medium"
                             >
                                 View Details
                             </Link>
@@ -143,8 +145,8 @@ export default function FindDoctorsPage() {
                             key={i}
                             onClick={() => setPage(i + 1)}
                             className={`w-10 h-10 rounded-lg font-medium transition-colors ${page === i + 1
-                                    ? 'bg-teal-600 text-white'
-                                    : 'bg-white dark:bg-slate-800 border hover:bg-teal-50'
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-gray-800 dark:text-white hover:bg-teal-50 dark:hover:bg-slate-700'
                                 }`}
                         >
                             {i + 1}
