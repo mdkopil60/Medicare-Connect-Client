@@ -93,7 +93,7 @@ export default function LoginPage() {
     };
 
     return (<div className="min-h-screen flex items-center justify-center bg-[#f4f7f9] px-4 py-12"> <Card className="max-w-md w-full p-8 shadow-[0_15px_40px_rgba(0,0,0,0.03)] border border-slate-100 bg-white rounded-[26px]">
- 
+
         <div className="flex flex-col gap-1 items-center justify-center pb-6 text-center">
             <h2 className="text-[26px] font-bold text-[#0f2942] tracking-tight">
                 Welcome Back
