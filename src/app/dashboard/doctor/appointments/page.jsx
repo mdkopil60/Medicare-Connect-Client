@@ -1,22 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card } from '@heroui/react';
+import { Button, Card, Spinner } from '@heroui/react';
 import { FaCheck, FaTimes, FaFilePrescription, FaUser, FaCalendarCheck, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-
-const INITIAL_APPOINTMENTS = [
-    { _id: "apt-101", patientName: "John Doe", age: 34, date: "2026-06-25", time: "10:00 AM", status: "Pending" },
-    { _id: "apt-102", patientName: "Sarah Smith", age: 28, date: "2026-06-25", time: "11:30 AM", status: "Accepted" },
-    { _id: "apt-103", patientName: "Robert Johnson", age: 45, date: "2026-06-26", time: "09:00 AM", status: "Pending" },
-    { _id: "apt-104", patientName: "Emily Davis", age: 22, date: "2026-06-26", time: "04:15 PM", status: "Accepted" }
-];
+import axios from 'axios';
 
 export default function AppointmentRequestsPage() {
-    const [appointments, setAppointments] = useState(INITIAL_APPOINTMENTS);
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
+    // 🔑 সিকিউরিটি হেডার গেটার মেথড
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("access-token");
+        return { headers: { authorization: `Bearer ${token}` } };
+    };
+
+    // 📥 ১. ডাটাবেজ থেকে অ্যাপয়েন্টমেন্ট ডাটা লোড করা
+    const fetchAppointments = async () => {
+        try {
+            setLoading(true);
+            // আপনার ব্যাকএন্ড রাউট অনুযায়ী URL পরিবর্তন করে নিতে পারেন
+            const res = await axios.get('http://localhost:5000/appointments/doctor', getAuthHeaders());
+            setAppointments(res.data || []);
+        } catch (err) {
+            console.error("Error fetching appointments:", err);
+            Swal.fire({ icon: 'error', title: 'Failed to load appointments' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
+
+    // ⚙️ ব্যাকএন্ডে স্ট্যাটাস আপডেট করার কমন হেল্পার ফাংশন
+    const updateAppointmentStatus = async (id, status) => {
+        try {
+            await axios.patch(`http://localhost:5000/appointments/${id}`, { status }, getAuthHeaders());
+            // রিয়েল-টাইম ইউজার এক্সপেরিয়েন্সের জন্য লোকাল স্টেট আপডেট
+            setAppointments(prev => prev.map(apt =>
+                apt._id === id ? { ...apt, status } : apt
+            ));
+            return true;
+        } catch (err) {
+            console.error(`Error updating status to ${status}:`, err);
+            Swal.fire({ icon: 'error', title: 'Action failed', text: err.response?.data?.message || 'Something went wrong.' });
+            return false;
+        }
+    };
+
+    // 🟢 ২. অ্যাপয়েন্টমেন্ট অ্যাকসেপ্ট হ্যান্ডলার
     const handleAccept = (id) => {
         Swal.fire({
             title: 'Accept Appointment?',
@@ -27,16 +64,17 @@ export default function AppointmentRequestsPage() {
             cancelButtonColor: '#94a3b8',
             confirmButtonText: 'Yes, Accept',
             cancelButtonText: 'Cancel'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setAppointments(prev => prev.map(apt =>
-                    apt._id === id ? { ...apt, status: 'Accepted' } : apt
-                ));
-                Swal.fire({ icon: 'success', title: 'Appointment accepted!', timer: 1500, showConfirmButton: false });
+                const success = await updateAppointmentStatus(id, 'Accepted');
+                if (success) {
+                    Swal.fire({ icon: 'success', title: 'Appointment accepted!', timer: 1500, showConfirmButton: false });
+                }
             }
         });
     };
 
+    // 🔴 ৩. অ্যাপয়েন্টমেন্ট রিজেক্ট হ্যান্ডলার
     const handleReject = (id) => {
         Swal.fire({
             title: 'Reject Appointment?',
@@ -47,16 +85,17 @@ export default function AppointmentRequestsPage() {
             cancelButtonColor: '#94a3b8',
             confirmButtonText: 'Yes, Reject',
             cancelButtonText: 'Cancel'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setAppointments(prev => prev.map(apt =>
-                    apt._id === id ? { ...apt, status: 'Rejected' } : apt
-                ));
-                Swal.fire({ icon: 'error', title: 'Appointment rejected.', timer: 1500, showConfirmButton: false });
+                const success = await updateAppointmentStatus(id, 'Rejected');
+                if (success) {
+                    Swal.fire({ icon: 'error', title: 'Appointment rejected.', timer: 1500, showConfirmButton: false });
+                }
             }
         });
     };
 
+    // 🔵 ৪. অ্যাপয়েন্টমেন্ট কমপ্লিট ও প্রেসক্রিপশন রাউটিং
     const handleComplete = (id) => {
         Swal.fire({
             title: 'Mark as Completed?',
@@ -67,22 +106,20 @@ export default function AppointmentRequestsPage() {
             cancelButtonColor: '#94a3b8',
             confirmButtonText: 'Yes, Complete',
             cancelButtonText: 'Cancel'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setAppointments(prev => prev.map(apt =>
-                    apt._id === id ? { ...apt, status: 'Completed' } : apt
-                ));
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Appointment Completed!',
-                    text: 'Opening prescription form...',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    // আপনার ফোল্ডারের নাম অনুযায়ী এখানে 'prescriptions' (s সহ) রাউট সেট করা হয়েছে
-                    router.push(`/dashboard/doctor/prescriptions?appointmentId=${id}`);
-                });
+                const success = await updateAppointmentStatus(id, 'Completed');
+                if (success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Appointment Completed!',
+                        text: 'Opening prescription form...',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        router.push(`/dashboard/doctor/prescriptions?appointmentId=${id}`);
+                    });
+                }
             }
         });
     };
@@ -102,6 +139,15 @@ export default function AppointmentRequestsPage() {
                 return `${baseClass} bg-slate-50 text-slate-700 border-slate-100`;
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+                <Spinner size="lg" color="teal" />
+                <p className="text-sm text-slate-500 font-medium animate-pulse">Syncing appointment schedules...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 max-w-5xl mx-auto min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
@@ -137,8 +183,8 @@ export default function AppointmentRequestsPage() {
                                                     <FaUser className="text-xs" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-slate-700 dark:text-slate-200">{apt.patientName}</p>
-                                                    <p className="text-xs text-slate-400">Age: {apt.age}</p>
+                                                    <p className="font-semibold text-slate-700 dark:text-slate-200">{apt.patientName || apt.userId?.name}</p>
+                                                    <p className="text-xs text-slate-400">Age: {apt.age || apt.userId?.age || 'N/A'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -155,12 +201,12 @@ export default function AppointmentRequestsPage() {
                                             <div className="flex justify-center items-center gap-2">
                                                 {apt.status === 'Pending' && (
                                                     <>
-                                                        <Button size="sm" variant="flat" className="text-teal-600 bg-teal-50 dark:bg-teal-950/30 border border-teal-100/50 dark:border-teal-900/30 font-bold rounded-lg px-3" startContent={<FaCheck className="text-xs" />} onPress={() => handleAccept(apt._id)}>Accept</Button>
-                                                        <Button size="sm" variant="flat" className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/50 dark:border-red-900/30 font-bold rounded-lg px-3" startContent={<FaTimes className="text-xs" />} onPress={() => handleReject(apt._id)}>Reject</Button>
+                                                        <Button size="sm" variant="flat" className="text-teal-600 bg-teal-50 dark:bg-teal-950/30 border border-teal-100/50 dark:border-teal-900/30 font-bold rounded-lg px-3 cursor-pointer" startContent={<FaCheck className="text-xs" />} onPress={() => handleAccept(apt._id)}>Accept</Button>
+                                                        <Button size="sm" variant="flat" className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/50 dark:border-red-900/30 font-bold rounded-lg px-3 cursor-pointer" startContent={<FaTimes className="text-xs" />} onPress={() => handleReject(apt._id)}>Reject</Button>
                                                     </>
                                                 )}
                                                 {apt.status === 'Accepted' && (
-                                                    <Button size="sm" color="primary" className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg px-4 shadow-sm" startContent={<FaFilePrescription />} onPress={() => handleComplete(apt._id)}>Mark Completed</Button>
+                                                    <Button size="sm" color="primary" className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg px-4 shadow-sm cursor-pointer" startContent={<FaFilePrescription />} onPress={() => handleComplete(apt._id)}>Mark Completed</Button>
                                                 )}
                                                 {(apt.status === 'Completed' || apt.status === 'Rejected') && (
                                                     <span className="text-xs font-medium text-slate-400 italic">No actions required</span>

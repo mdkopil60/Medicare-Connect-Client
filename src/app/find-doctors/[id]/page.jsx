@@ -18,6 +18,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
     const [bookingData, setBookingData] = useState({ symptoms: '', selectedDate: '', selectedSlot: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // বাস্তব প্রজেক্টে এটি আপনার Auth Context / Firebase Auth থেকে আসবে
     const currentUser = { id: "patient_123", email: "patient@example.com" };
 
     useEffect(() => {
@@ -54,6 +55,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
+                    {/* Left Side: Doctor Info */}
                     <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 sm:p-8">
                         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
                             <div className="relative group">
@@ -112,6 +114,8 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Right Side: Booking Area */}
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 sticky top-6">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2.5">
                             <span className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400"><FaRegClock className="text-sm" /></span>
@@ -145,18 +149,16 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
 
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Symptoms / Notes</label>
-                                <div className="relative">
-                                    <textarea
-                                        placeholder="Briefly describe your health condition..."
-                                        className="w-full pl-3 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition dark:text-white resize-none"
-                                        rows="3"
-                                        onChange={(e) => setBookingData({ ...bookingData, symptoms: e.target.value })}
-                                    />
-                                </div>
+                                <textarea
+                                    placeholder="Briefly describe your health condition..."
+                                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition dark:text-white resize-none"
+                                    rows="3"
+                                    onChange={(e) => setBookingData({ ...bookingData, symptoms: e.target.value })}
+                                />
                             </div>
 
                             {bookingData.selectedDate && bookingData.selectedSlot ? (
-                                <div className="mt-6 p-4 border border-dashed border-teal-200 dark:border-teal-900 rounded-xl bg-teal-50/30 dark:bg-teal-950/10 animate-fadeIn">
+                                <div className="mt-6 p-4 border border-dashed border-teal-200 dark:border-teal-900 rounded-xl bg-teal-50/30 dark:bg-teal-950/10">
                                     <label className="block text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-2.5 flex items-center gap-1">
                                         <FaNotesMedical /> Secure Checkout via Stripe
                                     </label>
@@ -200,9 +202,18 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
         setCardError('');
 
         try {
-            const res = await axios.post('http://localhost:5000/create-payment-intent', { price: doctor.consultationFee });
+            const token = localStorage.getItem('access-token');
+            const headers = { headers: { authorization: `Bearer ${token}` } };
+
+            // ১. ক্রিয়েট পেমেন্ট ইনটেন্ট উইথ টোকেন
+            const res = await axios.post(
+                'http://localhost:5000/create-payment-intent',
+                { price: doctor.consultationFee },
+                headers
+            );
             const clientSecret = res.data.clientSecret;
 
+            // ২. কার্ড পেমেন্ট কনফার্মেশন
             const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
                 payment_method: {
                     card: card,
@@ -216,6 +227,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                 return;
             }
 
+            // ৩. পেমেন্ট সফল হলে ডাটাবেজে অ্যাপয়েন্টমেন্ট সেভ
             if (paymentIntent.status === 'succeeded') {
                 const appointmentInfo = {
                     patientId: currentUser.id,
@@ -229,7 +241,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                     transactionId: paymentIntent.id
                 };
 
-                const saveRes = await axios.post('http://localhost:5000/appointments', appointmentInfo);
+                const saveRes = await axios.post('http://localhost:5000/appointments', appointmentInfo, headers);
 
                 if (saveRes.data.success) {
                     Swal.fire({
@@ -242,7 +254,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             }
         } catch (err) {
             console.error(err);
-            setCardError('Failed to process payment with server.');
+            setCardError('Failed to process payment with server. Check console for details.');
         }
         setIsSubmitting(false);
     };
@@ -255,7 +267,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                         style: {
                             base: {
                                 fontSize: '15px',
-                                color: '#1e293b',
+                                color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#ffffff' : '#1e293b',
                                 fontFamily: 'Inter, sans-serif',
                                 '::placeholder': { color: '#94a3b8' },
                             },

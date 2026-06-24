@@ -1,71 +1,108 @@
 "use client";
 
-import React, { useState } from "react";
-// মোডালের সব ভাঙা সাব-কম্পোনেন্ট ইম্পোর্ট বাদ দেওয়া হয়েছে
+import React, { useState, useEffect } from "react";
 import { Card, Button, Chip, Input } from "@heroui/react";
 import { Calendar, Clock, XCircle, Edit2, User, X } from "lucide-react";
+import axios from "axios"; // API Requests এর জন্য ইম্পোর্ট করা হয়েছে
 
-const initialAppointments = [
-    {
-        id: 1,
-        doctor: "Dr. Nafis Iqbal",
-        specialty: "Cardiologist",
-        date: "2026-06-25",
-        time: "10:30 AM",
-        status: "Confirmed",
-    },
-    {
-        id: 2,
-        doctor: "Dr. Sarah Rahman",
-        specialty: "Dermatologist",
-        date: "2026-06-28",
-        time: "03:15 PM",
-        status: "Pending",
-    },
-    {
-        id: 3,
-        doctor: "Dr. Amit Hasan",
-        specialty: "Pediatrician",
-        date: "2026-07-02",
-        time: "11:00 AM",
-        status: "Confirmed",
-    },
-];
+// আপনার Auth Context বা Firebase থেকে ইউজার অবজেক্টটি নিয়ে আসবেন।
+// এখানে ডেমো হিসেবে একটি স্ট্রাকচার রাখা হলো:
+const loggedInUser = { email: "patient@example.com" };
 
 export default function AppointmentsPage() {
-    const [appointments, setAppointments] = useState(initialAppointments);
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedAppt, setSelectedAppt] = useState(null);
     const [newDate, setNewDate] = useState("");
     const [newTime, setNewTime] = useState("");
 
-    const handleRescheduleClick = (appt) => {
-        setSelectedAppt(appt);
-        setNewDate(appt.date);
-        setNewTime(appt.time);
-        setIsModalOpen(true);
-    };
+    // ১. ব্যাকএন্ড থেকে এই লগড-ইন ইউজারের নির্দিষ্ট অ্যাপয়েন্টমেন্ট ডাটা লোড করা
+    useEffect(() => {
+        if (loggedInUser?.email) {
+            fetchAppointments();
+        }
+    }, [loggedInUser?.email]);
 
-    const saveReschedule = () => {
-        setAppointments((prev) =>
-            prev.map((appt) =>
-                appt.id === selectedAppt.id
-                    ? { ...appt, date: newDate, time: newTime, status: "Pending" }
-                    : appt
-            )
-        );
-        setIsModalOpen(false);
-    };
-
-    const handleCancel = (id) => {
-        if (confirm("Are you sure you want to cancel this appointment?")) {
-            setAppointments((prev) => prev.filter((appt) => appt.id !== id));
+    const fetchAppointments = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('access-token'); // JWT টোকেন রিড
+            const response = await axios.get(`http://localhost:5000/patient/appointments/${loggedInUser.email}`, {
+                headers: {
+                    authorization: `Bearer ${token}`
+                }
+            });
+            setAppointments(response.data);
+        } catch (error) {
+            console.error("Error fetching appointments:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
+    // ২. মোডাল ওপেন ও রিশেডিউলের প্রাথমিক ডাটা সেট
+    const handleRescheduleClick = (appt) => {
+        setSelectedAppt(appt);
+        setNewDate(appt.appointmentDate);
+        setNewTime(appt.appointmentTime);
+        setIsModalOpen(true);
+    };
+
+    // ৩. ব্যাকএন্ড API এর মাধ্যমে ডাটাবেজে রিশেডিউল সেভ করা
+    const saveReschedule = async () => {
+        try {
+            const token = localStorage.getItem('access-token');
+            const response = await axios.patch(`http://localhost:5000/appointments/reschedule/${selectedAppt._id}`,
+                {
+                    appointmentDate: newDate,
+                    appointmentTime: newTime
+                },
+                {
+                    headers: { authorization: `Bearer ${token}` }
+                }
+            );
+
+            if (response.data.modifiedCount > 0) {
+                // UI ইমিডিয়েটলি আপডেট করার জন্য আবার ডাটা ফেচ করা হলো
+                fetchAppointments();
+                setIsModalOpen(false);
+            }
+        } catch (error) {
+            console.error("Error rescheduling:", error);
+        }
+    };
+
+    // ৪. ব্যাকএন্ড API এর মাধ্যমে অ্যাপয়েন্টমেন্ট ক্যান্সেল করা (Status -> cancelled)
+    const handleCancel = async (id) => {
+        if (confirm("Are you sure you want to cancel this appointment?")) {
+            try {
+                const token = localStorage.getItem('access-token');
+                const response = await axios.patch(`http://localhost:5000/appointments/cancel/${id}`, {}, {
+                    headers: { authorization: `Bearer ${token}` }
+                });
+
+                if (response.data.modifiedCount > 0) {
+                    fetchAppointments(); // ডাটা রি-লোড
+                }
+            } catch (error) {
+                console.error("Error cancelling appointment:", error);
+            }
+        }
+    };
+
+    // লোডিং পেজ বা কন্টেন্ট লোডার রিকোয়ারমেন্ট হ্যান্ডলিং
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto max-w-6xl p-6 min-h-screen bg-slate-50/40 dark:bg-zinc-950">
-            {/* Colorful Header */}
+            {/* Header Block */}
             <div className="mb-10 border-b border-default-200/60 pb-6">
                 <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent">
                     My Appointments
@@ -86,11 +123,12 @@ export default function AppointmentsPage() {
                 /* COLORFUL GRID LAYOUT */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {appointments.map((appt) => {
-                        const isConfirmed = appt.status === "Confirmed";
+                        // MongoDB-র ID কনভেনশন (_id) এবং স্টেটাস কন্ডিশন চেক
+                        const isConfirmed = appt.appointmentStatus === "confirmed" || appt.appointmentStatus === "Confirmed";
 
                         return (
                             <Card
-                                key={appt.id}
+                                key={appt._id}
                                 className={`group relative border transition-all duration-300 rounded-3xl overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl
                                     ${isConfirmed
                                         ? "border-emerald-100 dark:border-emerald-950 hover:border-emerald-400/50 bg-gradient-to-b from-emerald-50/20 via-background to-background"
@@ -99,10 +137,8 @@ export default function AppointmentsPage() {
                             >
                                 {/* Main Content Area */}
                                 <div className="p-6">
-                                    {/* Top Header Block */}
                                     <div className="flex justify-between items-start gap-3 mb-5">
                                         <div className="flex items-center gap-3.5">
-                                            {/* Colorful Avatar Badge */}
                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold border transition-transform group-hover:scale-105 duration-300
                                                 ${isConfirmed
                                                     ? "bg-emerald-100/70 text-emerald-600 border-emerald-200/50"
@@ -113,12 +149,12 @@ export default function AppointmentsPage() {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-bold tracking-tight text-default-800 leading-snug">
-                                                    {appt.doctor}
+                                                    {appt.doctorName || "Specialist Doctor"}
                                                 </h3>
                                                 <p className={`text-xs font-semibold uppercase tracking-wider mt-0.5 
                                                     ${isConfirmed ? "text-emerald-600" : "text-amber-600"}`}
                                                 >
-                                                    {appt.specialty}
+                                                    {appt.specialization || "General Physician"}
                                                 </p>
                                             </div>
                                         </div>
@@ -128,9 +164,9 @@ export default function AppointmentsPage() {
                                             variant="flat"
                                             color={isConfirmed ? "success" : "warning"}
                                             size="sm"
-                                            className="font-bold px-2 rounded-full"
+                                            className="font-bold px-2 rounded-full capitalize"
                                         >
-                                            {appt.status}
+                                            {appt.appointmentStatus}
                                         </Chip>
                                     </div>
 
@@ -143,11 +179,11 @@ export default function AppointmentsPage() {
                                     >
                                         <div className="flex items-center gap-3 text-sm font-medium text-default-700">
                                             <Calendar className={`w-4 h-4 ${isConfirmed ? "text-emerald-500" : "text-amber-500"}`} />
-                                            <span>{appt.date}</span>
+                                            <span>{appt.appointmentDate}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm font-medium text-default-700">
                                             <Clock className={`w-4 h-4 ${isConfirmed ? "text-emerald-500" : "text-amber-500"}`} />
-                                            <span>{appt.time}</span>
+                                            <span>{appt.appointmentTime}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -157,6 +193,7 @@ export default function AppointmentsPage() {
                                     <Button
                                         className="flex-1 font-bold text-xs h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                         variant="flat"
+                                        disabled={appt.appointmentStatus === "cancelled"}
                                         startContent={<Edit2 className="w-3.5 h-3.5" />}
                                         onPress={() => handleRescheduleClick(appt)}
                                     >
@@ -165,10 +202,11 @@ export default function AppointmentsPage() {
                                     <Button
                                         className="font-bold text-xs h-11 rounded-xl border border-danger-100 dark:border-danger-950/50 hover:bg-danger/10 text-danger"
                                         variant="light"
+                                        disabled={appt.appointmentStatus === "cancelled"}
                                         startContent={<XCircle className="w-3.5 h-3.5" />}
-                                        onPress={() => handleCancel(appt.id)}
+                                        onPress={() => handleCancel(appt._id)}
                                     >
-                                        Cancel
+                                        {appt.appointmentStatus === "cancelled" ? "Cancelled" : "Cancel"}
                                     </Button>
                                 </div>
                             </Card>
@@ -177,19 +215,16 @@ export default function AppointmentsPage() {
                 </div>
             )}
 
-            {/* ─── ১০০% ফিক্সড কাস্টম মোডাল (যা স্ক্রিন লক বা ব্লার করে আটকে থাকবে না) ─── */}
+            {/* ─── ১০০% ফিক্সড কাস্টম মোডাল ─── */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    {/* ব্যাকড্রপ ব্লার লেয়ার */}
                     <div
                         className="fixed inset-0 bg-black/40 backdrop-blur-md cursor-pointer"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => setIsModalOpen(false)}
                     />
 
-                    {/* মোডাল কন্টেন্ট বক্স (পারফেক্ট সেন্টার লকড) */}
                     <div className="relative bg-white dark:bg-zinc-900 max-w-md w-full p-6 rounded-[28px] shadow-2xl border border-default-100 flex flex-col gap-5 z-10 animate-in zoom-in-95 duration-200">
 
-                        {/* ক্লোজ বাটন */}
                         <button
                             type="button"
                             className="absolute right-4 top-4 text-default-400 hover:text-default-600 p-1.5 rounded-xl hover:bg-default-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
@@ -198,17 +233,15 @@ export default function AppointmentsPage() {
                             <X className="w-4 h-4" />
                         </button>
 
-                        {/* হেডার পার্ট */}
                         <div className="pb-1">
                             <h2 className="text-xl font-bold text-default-800 dark:text-zinc-100 tracking-tight">
                                 Reschedule Appointment
                             </h2>
                             <p className="text-sm text-default-500 mt-1">
-                                Rescheduling your session with <span className="text-indigo-600 font-bold">{selectedAppt?.doctor}</span>.
+                                Rescheduling your session with <span className="text-indigo-600 font-bold">{selectedAppt?.doctorName}</span>.
                             </p>
                         </div>
 
-                        {/* বডি পার্ট (ইনপুট ফিল্ডস) */}
                         <div className="flex flex-col gap-5 py-1">
                             <Input
                                 type="date"
@@ -234,7 +267,6 @@ export default function AppointmentsPage() {
                             />
                         </div>
 
-                        {/* ফুটার পার্ট (স্ট্যান্ডার্ড HTML বাটন) */}
                         <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"
@@ -251,7 +283,6 @@ export default function AppointmentsPage() {
                                 Apply New Schedule
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}

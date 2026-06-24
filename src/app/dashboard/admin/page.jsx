@@ -1,56 +1,73 @@
 'use client';
 
-import { useState } from 'react';
-import { Card } from '@heroui/react';
+import { useState, useEffect } from 'react';
+import { Card, Spinner } from '@heroui/react';
 import { FaUsers, FaUserMd, FaCalendarCheck, FaStar, FaChartLine } from 'react-icons/fa';
-
-const INITIAL_ANALYTICS = {
-    totalPatients: 1240,
-    totalDoctors: 48,
-    totalAppointments: 3120,
-    doctorPerformance: [
-        { name: "Dr. Michael Vance", rating: 4.9, specialty: "Cardiologist" },
-        { name: "Dr. Sarah Smith", rating: 4.7, specialty: "Pediatrician" },
-        { name: "Dr. Emily Davis", rating: 4.5, specialty: "Dermatologist" }
-    ]
-};
+import axios from 'axios';
 
 export default function AdminDashboardOverview() {
-    const [analytics] = useState(INITIAL_ANALYTICS);
+    const [analytics, setAnalytics] = useState(null);
+    const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                setLoading(true);
+                const token = localStorage.getItem("access-token");
+                const res = await axios.get('http://localhost:5000/admin/dashboard-stats', {
+                    headers: { authorization: `Bearer ${token}` }
+                });
+                setAnalytics(res.data);
+            } catch (err) {
+                console.error("Failed to load analytics:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAnalytics();
+    }, []);
+
+    // ১. লোডিং স্টেট হ্যান্ডলিং
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 gap-4">
+                <Spinner size="lg" color="teal" />
+                <p className="text-sm text-slate-400 font-medium">Syncing system analytics...</p>
+            </div>
+        );
+    }
+
+    // ২. এরর বা ডাটা না থাকলে হ্যান্ডলিং
+    if (!analytics) {
+        return <div className="text-center p-10 text-slate-500">Unable to load dashboard data. Please check your connection.</div>;
+    }
+
+    // ৩. মূল রেন্ডারিং (ডাটা থাকলে)
     return (
-        <>
+        <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                    <FaChartLine className="text-teal-600" /> Dashboard Overview
+                    <FaChartLine className="text-teal-600" /> Admin Overview
                 </h1>
                 <p className="text-xs text-slate-400 mt-1">Real-time system statistics and performance metrics</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <Card className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-4 rounded-2xl shadow-sm">
-                    <div className="p-4 bg-blue-50 text-blue-600 rounded-xl"><FaUsers className="text-2xl" /></div>
-                    <div>
-                        <span className="block text-xs font-bold text-slate-400 uppercase">Total Patients</span>
-                        <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">{analytics.totalPatients}</p>
-                    </div>
-                </Card>
-
-                <Card className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-4 rounded-2xl shadow-sm">
-                    <div className="p-4 bg-teal-50 text-teal-600 rounded-xl"><FaUserMd className="text-2xl" /></div>
-                    <div>
-                        <span className="block text-xs font-bold text-slate-400 uppercase">Total Doctors</span>
-                        <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">{analytics.totalDoctors}</p>
-                    </div>
-                </Card>
-
-                <Card className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-4 rounded-2xl shadow-sm">
-                    <div className="p-4 bg-amber-50 text-amber-600 rounded-xl"><FaCalendarCheck className="text-2xl" /></div>
-                    <div>
-                        <span className="block text-xs font-bold text-slate-400 uppercase">Total Appointments</span>
-                        <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">{analytics.totalAppointments}</p>
-                    </div>
-                </Card>
+                {[
+                    { label: "Total Patients", val: analytics.totalPatients, icon: FaUsers, color: "bg-blue-50 text-blue-600" },
+                    { label: "Total Doctors", val: analytics.totalDoctors, icon: FaUserMd, color: "bg-teal-50 text-teal-600" },
+                    { label: "Total Appointments", val: analytics.totalAppointments, icon: FaCalendarCheck, color: "bg-amber-50 text-amber-600" }
+                ].map((stat, i) => (
+                    <Card key={i} className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-4 rounded-2xl shadow-sm">
+                        <div className={`p-4 ${stat.color} rounded-xl`}>
+                            <stat.icon className="text-2xl" />
+                        </div>
+                        <div>
+                            <span className="block text-xs font-bold text-slate-400 uppercase">{stat.label}</span>
+                            <p className="text-2xl font-black font-mono text-slate-800 dark:text-white">{stat.val}</p>
+                        </div>
+                    </Card>
+                ))}
             </div>
 
             <Card className="p-5 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm space-y-4">
@@ -58,7 +75,7 @@ export default function AdminDashboardOverview() {
                     <FaStar className="text-amber-500" /> Top Performing Physicians
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {analytics.doctorPerformance.map((doc, idx) => (
+                    {analytics.doctorPerformance?.map((doc, idx) => (
                         <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex justify-between items-center">
                             <div>
                                 <p className="font-semibold text-sm text-slate-700 dark:text-slate-200">{doc.name}</p>
@@ -71,6 +88,6 @@ export default function AdminDashboardOverview() {
                     ))}
                 </div>
             </Card>
-        </>
+        </div>
     );
 }

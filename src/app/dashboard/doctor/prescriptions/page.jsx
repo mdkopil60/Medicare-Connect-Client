@@ -2,33 +2,52 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, Card } from '@heroui/react';
-import { FaPlus, FaEdit, FaTrash, FaFilePrescription, FaUserMd, FaNotesMedical } from 'react-icons/fa';
+import { Button, Card, Spinner } from '@heroui/react';
+import { FaPlus, FaEdit, FaTrash, FaFilePrescription, FaNotesMedical } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-
-// ডেমো বা ফেক প্রেসক্রিপশন ডাটা সেট
-const INITIAL_PRESCRIPTIONS = [
-    { _id: "prc-501", appointmentId: "apt-102", patientName: "Sarah Smith", medicines: "Paracetamol 500mg (1+0+1), Omeprazole 20mg (1+0+1)", diagnosis: "Fever & Gastric issues", instructions: "Take medicines after meals. Rest for 3 days." },
-    { _id: "prc-502", appointmentId: "apt-104", patientName: "Emily Davis", medicines: "Cetirizine 10mg (0+0+1)", diagnosis: "Allergic Rhinitis", instructions: "Avoid cold drinks and dust." }
-];
+import axios from 'axios';
 
 export default function PrescriptionManagementPage() {
-    const [prescriptions, setPrescriptions] = useState(INITIAL_PRESCRIPTIONS);
+    const [prescriptions, setPrescriptions] = useState([]);
+    const [loading, setLoading] = useState(true);
     const searchParams = useSearchParams();
     const appointmentIdFromQuery = searchParams.get('appointmentId');
 
-    // যদি অ্যাপয়েন্টমেন্ট পেজ থেকে কোনো আইডি নিয়ে আসে, তাহলে সরাসরি নিউ প্রেসক্রিপশন পপআপ ওপেন হবে
+    // 🔑 সিকিউরিটি হেডার গেটার মেثড
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("access-token");
+        return { headers: { authorization: `Bearer ${token}` } };
+    };
+
+    // 📥 ১. ডাটাবেজ থেকে সব প্রেসক্রিপশন লোড করা (Read)
+    const fetchPrescriptions = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get('http://localhost:5000/prescriptions/doctor', getAuthHeaders());
+            setPrescriptions(res.data || []);
+        } catch (err) {
+            console.error("Error fetching prescriptions:", err);
+            Swal.fire({ icon: 'error', title: 'Failed to load prescriptions' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        if (appointmentIdFromQuery) {
-            // একটু ডিলে দিয়ে পপআপ ওপেন করা হচ্ছে যাতে পেজ লোড কমপ্লিট হয়
+        fetchPrescriptions();
+    }, []);
+
+    // অ্যাপয়েন্টমেন্ট পেজ থেকে আইডি নিয়ে আসলে অটো-পপআপ ট্রিগার
+    useEffect(() => {
+        if (appointmentIdFromQuery && prescriptions.length >= 0 && !loading) {
             const timer = setTimeout(() => {
                 openPrescriptionPopup({ appointmentId: appointmentIdFromQuery, isAutoOpen: true });
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [appointmentIdFromQuery]);
+    }, [appointmentIdFromQuery, loading]);
 
-    // Create & Update Popup Handler
+    // 📑 ২. ক্রিয়েট এবং আপডেট পপআপ হ্যান্ডলার (Create & Update)
     const openPrescriptionPopup = (prescription = null) => {
         const isEditMode = prescription && !prescription.isAutoOpen;
 
@@ -81,27 +100,33 @@ export default function PrescriptionManagementPage() {
                 }
                 return { patientName, appointmentId, diagnosis, medicines, instructions };
             }
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                const data = result.value;
+                const payload = result.value;
 
-                if (isEditMode) {
-                    // UPDATE PRESCRIPTION (State Update)
-                    setPrescriptions(prev => prev.map(item =>
-                        item._id === prescription._id ? { ...data, _id: prescription._id } : item
-                    ));
-                    Swal.fire({ icon: 'success', title: 'Prescription updated successfully!', timer: 1500, showConfirmButton: false });
-                } else {
-                    // CREATE PRESCRIPTION (State Add)
-                    const newPrescription = { ...data, _id: Date.now().toString() };
-                    setPrescriptions(prev => [...prev, newPrescription]);
-                    Swal.fire({ icon: 'success', title: 'Prescription issued successfully!', timer: 1500, showConfirmButton: false });
+                try {
+                    if (isEditMode) {
+                        // 🔄 এপিআই কল: আপডেট প্রেসক্রিপশন (PATCH/PUT)
+                        const res = await axios.patch(`http://localhost:5000/prescriptions/${prescription._id}`, payload, getAuthHeaders());
+                        setPrescriptions(prev => prev.map(item =>
+                            item._id === prescription._id ? res.data : item
+                        ));
+                        Swal.fire({ icon: 'success', title: 'Prescription updated successfully!', timer: 1500, showConfirmButton: false });
+                    } else {
+                        // ➕ এপিআই কল: নতুন প্রেসক্রিপশন তৈরি (POST)
+                        const res = await axios.post('http://localhost:5000/prescriptions', payload, getAuthHeaders());
+                        setPrescriptions(prev => [res.data, ...prev]);
+                        Swal.fire({ icon: 'success', title: 'Prescription issued successfully!', timer: 1500, showConfirmButton: false });
+                    }
+                } catch (err) {
+                    console.error("Error saving prescription:", err);
+                    Swal.fire({ icon: 'error', title: 'Operation failed', text: 'Could not save data to the server.' });
                 }
             }
         });
     };
 
-    // Delete Prescription Function
+    // 🗑️ ৩. প্রেসক্রিপশন ডিলিট ফাংশন (Delete)
     const handleDelete = (id) => {
         Swal.fire({
             title: 'Are you sure?',
@@ -112,13 +137,29 @@ export default function PrescriptionManagementPage() {
             cancelButtonColor: '#94a3b8',
             confirmButtonText: 'Yes, delete it!',
             cancelButtonText: 'Cancel'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setPrescriptions(prev => prev.filter(item => item._id !== id));
-                Swal.fire('Deleted!', 'The prescription record has been removed.', 'success');
+                try {
+                    // ❌ এপিআই কল: ডিলিট প্রেসক্রিপশন
+                    await axios.delete(`http://localhost:5000/prescriptions/${id}`, getAuthHeaders());
+                    setPrescriptions(prev => prev.filter(item => item._id !== id));
+                    Swal.fire('Deleted!', 'The prescription record has been removed.', 'success');
+                } catch (err) {
+                    console.error("Error deleting prescription:", err);
+                    Swal.fire({ icon: 'error', title: 'Delete failed', text: 'Server error occurred.' });
+                }
             }
         });
     };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+                <Spinner size="lg" color="teal" />
+                <p className="text-sm text-slate-500 font-medium animate-pulse">Loading prescription records...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 max-w-5xl mx-auto min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
@@ -134,14 +175,14 @@ export default function PrescriptionManagementPage() {
                 <Button
                     onPress={() => openPrescriptionPopup(null)}
                     color="primary"
-                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/10"
+                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/10 cursor-pointer"
                     startContent={<FaPlus />}
                 >
                     New Prescription
                 </Button>
             </div>
 
-            {/* Grid Layout of Prescriptions for Better UI Appearance */}
+            {/* Grid Layout of Prescriptions */}
             {prescriptions.length === 0 ? (
                 <Card className="border border-slate-100 dark:border-slate-800 p-8 text-center text-sm text-slate-400 bg-white dark:bg-slate-900 rounded-2xl">
                     No prescription records found.
@@ -161,7 +202,7 @@ export default function PrescriptionManagementPage() {
                                         <p className="text-[11px] text-slate-400 font-medium mt-0.5">Apt ID: {item.appointmentId}</p>
                                     )}
                                 </div>
-                                <span className="text-[10px] bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400 font-bold px-2 py-0.5 rounded border border-teal-100/30">
+                                <span className="text-[10px] bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400 font-bold px-2 py-0.5 rounded border border-teal-100/30 truncate max-w-[100px]">
                                     {item._id}
                                 </span>
                             </div>
@@ -195,7 +236,7 @@ export default function PrescriptionManagementPage() {
                                 <Button
                                     size="sm"
                                     variant="flat"
-                                    className="text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-100/40 dark:border-amber-900/30 font-bold rounded-lg px-3"
+                                    className="text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-100/40 dark:border-amber-900/30 font-bold rounded-lg px-3 cursor-pointer"
                                     startContent={<FaEdit />}
                                     onPress={() => openPrescriptionPopup(item)}
                                 >
@@ -204,7 +245,7 @@ export default function PrescriptionManagementPage() {
                                 <Button
                                     size="sm"
                                     variant="flat"
-                                    className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/40 dark:border-red-900/30 font-bold rounded-lg px-3"
+                                    className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/40 dark:border-red-900/30 font-bold rounded-lg px-3 cursor-pointer"
                                     startContent={<FaTrash />}
                                     onPress={() => handleDelete(item._id)}
                                 >

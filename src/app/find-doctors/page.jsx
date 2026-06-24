@@ -1,156 +1,80 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-import { FaSearch, FaStar } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, Button, Spinner } from "@heroui/react";
+import { User, MapPin, DollarSign } from "lucide-react";
+import axios from "axios";
 
 export default function FindDoctorsPage() {
+    const router = useRouter();
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [specialization, setSpecialization] = useState('');
-    const [sort, setSort] = useState('');
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const specializations = ['Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'Dermatology', 'General'];
-
-    const fetchDoctors = async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({ page: String(page), limit: '9' });
-            if (search) params.set('search', search);
-            if (specialization) params.set('specialization', specialization);
-            if (sort) params.set('sort', sort);
-
-            const res = await axios.get(`http://localhost:5000/doctors?${params.toString()}`);
-            setDoctors(res.data.doctors || []);
-            setTotalPages(res.data.totalPages || 1);
-        } catch (error) {
-            console.error("Error fetching doctors:", error);
-        }
-        setLoading(false);
-    };
 
     useEffect(() => {
-        fetchDoctors();
-    }, [page, specialization, sort]);
+        axios.get("http://localhost:5000/doctors?limit=20")
+            .then((res) => {
+                // ব্যাকএন্ড অ্যারে ফরম্যাট অনুযায়ী ডেটা সেট করা
+                setDoctors(res.data?.doctors || res.data || []);
+            })
+            .catch((err) => console.error("Error fetching doctors:", err))
+            .finally(() => setLoading(false));
+    }, []);
 
-    const handleSearch = (e) => {
-        e.preventDefault();
-        setPage(1);
-        fetchDoctors();
-    };
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-[60vh]">
+                <Spinner size="lg" label="Loading Expert Doctors..." />
+            </div>
+        );
+    }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Find Doctors</h1>
+        <div className="container mx-auto max-w-6xl p-6 min-h-screen">
+            <h1 className="text-3xl font-extrabold text-default-800 mb-2">Find Our Expert Doctors</h1>
+            <p className="text-default-500 mb-8">Book an appointment with top-rated and verified specialists.</p>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 mb-8">
-                <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search doctors..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
-                        />
-                    </div>
-                    <select
-                        value={specialization}
-                        onChange={(e) => { setSpecialization(e.target.value); setPage(1); }}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
-                    >
-                        <option value="">All Specializations</option>
-                        {specializations.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={sort}
-                        onChange={(e) => { setSort(e.target.value); setPage(1); }}
-                        className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none dark:bg-slate-900 text-gray-800 dark:text-white"
-                    >
-                        <option value="">Sort By</option>
-                        <option value="fee_asc">Fee: Low to High</option>
-                        <option value="fee_desc">Fee: High to Low</option>
-                        <option value="exp_desc">Experience: High to Low</option>
-                        <option value="rating_desc">Rating: High to Low</option>
-                    </select>
-                    <button type="submit" className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">
-                        Search
-                    </button>
-                </form>
-            </div>
-
-            {loading ? (
-                <div className="text-center py-20">
-                    <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto" />
-                </div>
-            ) : doctors.length === 0 ? (
-                <p className="text-center text-gray-500 py-20 dark:text-gray-400">No doctors found</p>
+            {doctors.length === 0 ? (
+                <p className="text-center text-default-400 py-10">No verified doctors found at this moment.</p>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {doctors.map((doctor, i) => (
-                        <motion.div
-                            key={doctor._id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col justify-between"
-                        >
+                    {doctors.map((doctor) => (
+                        <Card key={doctor._id} className="p-5 border border-default-100 flex flex-col justify-between rounded-2xl bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
                             <div>
-                                <div className="flex items-center gap-4 mb-4">
-                                    <img
-                                        src={doctor.userId?.photo || doctor.profileImage || `https://ui-avatars.com/api/?name=${doctor.doctorName}&background=0d9488&color=fff`}
-                                        alt={doctor.doctorName}
-                                        className="w-16 h-16 rounded-full object-cover"
-                                    />
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800 dark:text-white">{doctor.doctorName}</h3>
-                                        <p className="text-sm text-teal-600 font-medium">{doctor.specialization}</p>
-                                        {doctor.averageRating !== undefined && (
-                                            <div className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
-                                                <FaStar className="text-yellow-400" />
-                                                <span>{doctor.averageRating.toFixed(1)}</span>
-                                                <span className="text-gray-400">({doctor.totalReviews || 0})</span>
-                                            </div>
-                                        )}
+                                <div className="w-20 h-20 bg-emerald-100 rounded-xl flex items-center justify-center overflow-hidden mb-4">
+                                    {doctor.profileImage ? (
+                                        <img src={doctor.profileImage} alt={doctor.doctorName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-8 h-8 text-emerald-600" />
+                                    )}
+                                </div>
+                                <div className="inline-block bg-emerald-50 text-emerald-600 font-bold uppercase text-[10px] px-2 py-0.5 rounded mb-2">
+                                    {doctor.specialization}
+                                </div>
+                                <h3 className="text-lg font-bold text-default-800 dark:text-white">{doctor.doctorName}</h3>
+                                <p className="text-xs text-default-400 mt-0.5">{doctor.qualifications || "MBBS, MD"}</p>
+
+                                <div className="mt-4 flex flex-col gap-1.5 text-sm text-default-600 dark:text-zinc-300">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-default-400" />
+                                        <span>{doctor.hospitalName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <DollarSign className="w-4 h-4 text-emerald-500" />
+                                        <span className="font-semibold text-emerald-600">${doctor.consultationFee}</span>
                                     </div>
                                 </div>
-                                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                    <span>{doctor.experience} years exp</span>
-                                    <span className="text-teal-600 font-semibold dark:text-teal-400">${doctor.consultationFee}</span>
-                                </div>
                             </div>
-                            <Link
-                                href={`/find-doctors/${doctor._id}`}
-                                className="block text-center py-2 border border-teal-600 text-teal-600 rounded-lg hover:bg-teal-600 hover:text-white transition-colors mt-auto font-medium"
-                            >
-                                View Details
-                            </Link>
-                        </motion.div>
-                    ))}
-                </div>
-            )}
 
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-8">
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setPage(i + 1)}
-                            className={`w-10 h-10 rounded-lg font-medium transition-colors ${page === i + 1
-                                ? 'bg-teal-600 text-white'
-                                : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-gray-800 dark:text-white hover:bg-teal-50 dark:hover:bg-slate-700'
-                                }`}
-                        >
-                            {i + 1}
-                        </button>
+                            {/* 🔗 এখানে ক্লিক করলে আইডি সহ ডায়নামিক রাউটে নিয়ে যাবে */}
+                            <Button
+                                color="primary"
+                                className="w-full mt-5 font-semibold rounded-xl bg-blue-600 text-white"
+                                onPress={() => router.push(`/find-doctors/${doctor._id}`)}
+                            >
+                                View Profile & Book
+                            </Button>
+                        </Card>
                     ))}
                 </div>
             )}

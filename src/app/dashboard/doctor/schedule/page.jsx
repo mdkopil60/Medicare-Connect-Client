@@ -1,29 +1,45 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, Card } from '@heroui/react';
+import { useState, useEffect } from 'react';
+import { Button, Card, Spinner } from '@heroui/react';
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const INITIAL_SCHEDULES = [
-    { _id: "1", day: "Monday", startTime: "09:00", endTime: "13:00", maxPatients: 12 },
-    { _id: "2", day: "Tuesday", startTime: "14:00", endTime: "18:00", maxPatients: 10 },
-    { _id: "3", day: "Wednesday", startTime: "08:30", endTime: "12:30", maxPatients: 15 },
-    { _id: "4", day: "Thursday", startTime: "15:00", endTime: "19:30", maxPatients: 8 },
-    { _id: "5", day: "Friday", startTime: "10:00", endTime: "15:00", maxPatients: 16 },
-    { _id: "6", day: "Sunday", startTime: "09:00", endTime: "12:00", maxPatients: 6 }
-];
-
 export default function ManageSchedulePage() {
-    const [schedules, setSchedules] = useState(INITIAL_SCHEDULES);
+    const [schedules, setSchedules] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // SweetAlert2 দিয়ে Add এবং Edit করার জন্য কমন Popup Handler
+    // 🔑 সিকিউরিটি হেডার গেটার মেথড
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("access-token");
+        return { headers: { authorization: `Bearer ${token}` } };
+    };
+
+    // 📥 ১. ডাটাবেজ থেকে সব শিডিউল স্লট লোড করা (Read)
+    const fetchSchedules = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get('http://localhost:5000/schedules/doctor', getAuthHeaders());
+            setSchedules(res.data || []);
+        } catch (err) {
+            console.error("Error fetching schedules:", err);
+            Swal.fire({ icon: 'error', title: 'Failed to load availability schedules' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSchedules();
+    }, []);
+
+    // 📑 ২. ক্রিয়েট এবং আপডেট পপআপ হ্যান্ডলার (Create & Update)
     const openSchedulePopup = (schedule = null) => {
         const isEditMode = !!schedule;
 
-        // ডপডাউন অপশনগুলো তৈরি করা
         const dayOptions = DAYS_OF_WEEK.map(day =>
             `<option value="${day}" ${schedule?.day === day ? 'selected' : ''}>${day}</option>`
         ).join('');
@@ -75,27 +91,33 @@ export default function ManageSchedulePage() {
                 }
                 return { day, startTime, endTime, maxPatients: parseInt(maxPatients) };
             }
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                const data = result.value;
+                const payload = result.value;
 
-                if (isEditMode) {
-                    // ফেক ডাটা আপডেট (State Update)
-                    setSchedules(prev => prev.map(item =>
-                        item._id === schedule._id ? { ...data, _id: schedule._id } : item
-                    ));
-                    Swal.fire({ icon: 'success', title: 'Schedule updated successfully!', timer: 1500, showConfirmButton: false });
-                } else {
-                    // নতুন ফেক ডাটা যোগ (State Add)
-                    const newSchedule = { ...data, _id: Date.now().toString() };
-                    setSchedules(prev => [...prev, newSchedule]);
-                    Swal.fire({ icon: 'success', title: 'Schedule added successfully!', timer: 1500, showConfirmButton: false });
+                try {
+                    if (isEditMode) {
+                        // 🔄 এপিআই কল: আপডেট শিডিউল (PATCH/PUT)
+                        const res = await axios.patch(`http://localhost:5000/schedules/${schedule._id}`, payload, getAuthHeaders());
+                        setSchedules(prev => prev.map(item =>
+                            item._id === schedule._id ? res.data : item
+                        ));
+                        Swal.fire({ icon: 'success', title: 'Schedule updated successfully!', timer: 1500, showConfirmButton: false });
+                    } else {
+                        // ➕ এপিআই কল: নতুন শিডিউল স্লট তৈরি (POST)
+                        const res = await axios.post('http://localhost:5000/schedules', payload, getAuthHeaders());
+                        setSchedules(prev => [...prev, res.data]);
+                        Swal.fire({ icon: 'success', title: 'Schedule added successfully!', timer: 1500, showConfirmButton: false });
+                    }
+                } catch (err) {
+                    console.error("Error saving schedule:", err);
+                    Swal.fire({ icon: 'error', title: 'Operation failed', text: 'Could not store data on server.' });
                 }
             }
         });
     };
 
-    // Delete Handler (English Version)
+    // 🗑️ ৩. শিডিউল স্লট ডিলিট ফাংশন (Delete)
     const handleDelete = (id) => {
         Swal.fire({
             title: 'Are you sure?',
@@ -106,13 +128,29 @@ export default function ManageSchedulePage() {
             cancelButtonColor: '#ef4444',
             confirmButtonText: 'Yes, delete it!',
             cancelButtonText: 'Cancel'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setSchedules(prev => prev.filter(item => item._id !== id));
-                Swal.fire('Deleted!', 'The slot has been removed successfully.', 'success');
+                try {
+                    // ❌ এপিআই কল: ডিলিট শিডিউল স্লট
+                    await axios.delete(`http://localhost:5000/schedules/${id}`, getAuthHeaders());
+                    setSchedules(prev => prev.filter(item => item._id !== id));
+                    Swal.fire('Deleted!', 'The slot has been removed successfully.', 'success');
+                } catch (err) {
+                    console.error("Error deleting schedule:", err);
+                    Swal.fire({ icon: 'error', title: 'Delete failed', text: 'Server error occurred.' });
+                }
             }
         });
     };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+                <Spinner size="lg" color="teal" />
+                <p className="text-sm text-slate-500 font-medium animate-pulse">Loading availability matrices...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 max-w-5xl mx-auto min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
@@ -128,7 +166,7 @@ export default function ManageSchedulePage() {
                 <Button
                     onPress={() => openSchedulePopup(null)}
                     color="primary"
-                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/10"
+                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/10 cursor-pointer"
                     startContent={<FaPlus />}
                 >
                     Add Schedule
@@ -166,12 +204,11 @@ export default function ManageSchedulePage() {
                                         <td className="p-4 font-medium text-slate-500">{item.maxPatients} Patients</td>
                                         <td className="p-4 text-center pr-6">
                                             <div className="flex justify-center items-center gap-2">
-                                                {/* Edit বাটনে ক্লিক করলে এখন SweetAlert2 Popup আসবে */}
                                                 <Button
                                                     isIconOnly
                                                     size="sm"
                                                     variant="flat"
-                                                    className="text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-100/50 dark:border-amber-900/30 rounded-lg"
+                                                    className="text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-100/50 dark:border-amber-900/30 rounded-lg cursor-pointer"
                                                     onPress={() => openSchedulePopup(item)}
                                                 >
                                                     <FaEdit />
@@ -180,7 +217,7 @@ export default function ManageSchedulePage() {
                                                     isIconOnly
                                                     size="sm"
                                                     variant="flat"
-                                                    className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/50 dark:border-red-900/30 rounded-lg"
+                                                    className="text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-100/50 dark:border-red-900/30 rounded-lg cursor-pointer"
                                                     onPress={() => handleDelete(item._id)}
                                                 >
                                                     <FaTrash />
