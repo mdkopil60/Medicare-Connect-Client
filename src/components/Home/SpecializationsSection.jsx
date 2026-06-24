@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 import { Card } from '@heroui/react';
+
 import {
     FaStethoscope,
     FaHeartbeat,
@@ -14,21 +15,60 @@ import {
     FaRibbon,
     FaLungs,
     FaProcedures,
-    FaEyeDropper
+    FaEyeDropper,
 } from 'react-icons/fa';
 
-// Expanded icon mapping with rich, vibrant color configurations for each field
 const specConfig = {
-    Cardiology: { icon: FaHeartbeat, color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-950/30' },
-    Neurology: { icon: FaBrain, color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30' },
-    Orthopedics: { icon: FaBone, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
-    Pediatrics: { icon: FaBaby, color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-950/30' },
-    Dermatology: { icon: FaEye, color: 'text-teal-500', bg: 'bg-teal-50 dark:bg-teal-950/30' },
-    Oncology: { icon: FaRibbon, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-950/30' },
-    Gastroenterology: { icon: FaProcedures, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
-    Pulmonology: { icon: FaLungs, color: 'text-cyan-500', bg: 'bg-cyan-50 dark:bg-cyan-950/30' },
-    Urology: { icon: FaStethoscope, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-    Ophthalmology: { icon: FaEyeDropper, color: 'text-pink-500', bg: 'bg-pink-50 dark:bg-pink-950/30' },
+    Cardiology: {
+        icon: FaHeartbeat,
+        color: 'text-rose-500',
+        bg: 'bg-rose-100 dark:bg-rose-950/40',
+    },
+    Neurology: {
+        icon: FaBrain,
+        color: 'text-violet-500',
+        bg: 'bg-violet-100 dark:bg-violet-950/40',
+    },
+    Orthopedics: {
+        icon: FaBone,
+        color: 'text-amber-500',
+        bg: 'bg-amber-100 dark:bg-amber-950/40',
+    },
+    Pediatrics: {
+        icon: FaBaby,
+        color: 'text-sky-500',
+        bg: 'bg-sky-100 dark:bg-sky-950/40',
+    },
+    Dermatology: {
+        icon: FaEye,
+        color: 'text-teal-500',
+        bg: 'bg-teal-100 dark:bg-teal-950/40',
+    },
+    Oncology: {
+        icon: FaRibbon,
+        color: 'text-indigo-500',
+        bg: 'bg-indigo-100 dark:bg-indigo-950/40',
+    },
+    Gastroenterology: {
+        icon: FaProcedures,
+        color: 'text-emerald-500',
+        bg: 'bg-emerald-100 dark:bg-emerald-950/40',
+    },
+    Pulmonology: {
+        icon: FaLungs,
+        color: 'text-cyan-500',
+        bg: 'bg-cyan-100 dark:bg-cyan-950/40',
+    },
+    Urology: {
+        icon: FaStethoscope,
+        color: 'text-blue-500',
+        bg: 'bg-blue-100 dark:bg-blue-950/40',
+    },
+    Ophthalmology: {
+        icon: FaEyeDropper,
+        color: 'text-pink-500',
+        bg: 'bg-pink-100 dark:bg-pink-950/40',
+    },
 };
 
 export const SPECIALIZATIONS = [
@@ -46,58 +86,106 @@ export const SPECIALIZATIONS = [
 
 export default function SpecializationsSection() {
     return (
-        <section className="py-20 bg-default-50 dark:bg-background relative overflow-hidden">
+        <section className="relative py-24 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-black dark:via-zinc-950 dark:to-black">
+
+            {/* Background Effects */}
+            <div className="absolute top-20 left-20 w-72 h-72 bg-cyan-500/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-20 right-20 w-72 h-72 bg-purple-500/10 rounded-full blur-[120px]" />
+            <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2" />
+
             <div className="max-w-7xl mx-auto px-6 relative z-10">
 
-                {/* Header Section */}
+                {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 40 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-center mb-16"
+                    className="text-center mb-20"
                 >
-                    <span className="text-xs font-bold tracking-wider uppercase bg-secondary-50 text-secondary-600 px-3 py-1 rounded-full dark:bg-secondary-950/50">
-                        Categories
+                    <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary font-semibold uppercase tracking-wider text-sm">
+                        Medical Categories
                     </span>
-                    <h2 className="text-4xl md:text-5xl font-black mt-4 bg-gradient-to-r from-default-900 via-secondary-600 to-primary-500 bg-clip-text text-transparent">
+
+                    <h2 className="mt-6 text-4xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
                         Medical Specializations
                     </h2>
-                    <p className="text-default-500 mt-3 text-lg max-w-xl mx-auto">
-                        Find the right verified specialist tailored precisely to your health needs
+
+                    <p className="max-w-2xl mx-auto mt-5 text-lg text-default-500">
+                        Find experienced and verified healthcare specialists
+                        tailored to your unique medical needs.
                     </p>
                 </motion.div>
 
-                {/* Categories Responsive Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {/* Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                     {SPECIALIZATIONS.map((spec, index) => {
-                        const config = specConfig[spec] || { icon: FaStethoscope, color: 'text-primary', bg: 'bg-primary-50' };
+                        const config = specConfig[spec];
                         const Icon = config.icon;
 
                         return (
                             <motion.div
                                 key={spec}
-                                initial={{ opacity: 0, y: 25 }}
+                                initial={{ opacity: 0, y: 40 }}
                                 whileInView={{ opacity: 1, y: 0 }}
-                                whileHover={{ y: -6 }}
+                                whileHover={{
+                                    y: -10,
+                                    scale: 1.03,
+                                }}
                                 viewport={{ once: true }}
-                                transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.04 }}
-                                className="h-full"
+                                transition={{
+                                    delay: index * 0.05,
+                                }}
                             >
-                                <Link href={`/find-doctors?specialty=${spec.toLowerCase()}`} className="block h-full">
-                                    <Card className="p-6 h-full border border-default-200/40 bg-background/70 backdrop-blur-md flex flex-col items-center justify-center text-center hover:shadow-xl hover:border-primary-500/20 group cursor-pointer transition-all duration-300">
+                                <Link
+                                    href={`/ find - doctors ? specialty = ${spec.toLowerCase()} `}
+                                >
+                                    <Card
+                                        className="
+                      group
+                      relative
+                      overflow-hidden
+                      h-full
+                      p-6
+                      bg-background/70
+                      backdrop-blur-xl
+                      border
+                      border-default-200/50
+                      hover:border-primary/30
+                      transition-all
+                      duration-500
+                      hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]
+                    "
+                                    >
+                                        {/* Glow */}
+                                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5" />
 
-                                        {/* Dynamic Colorful Icon Wrapper */}
-                                        <div className={`p-4 rounded-2xl mb-4 ${config.bg} ${config.color} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                                            <Icon size={28} />
+                                        <div className="relative z-10 flex flex-col items-center text-center">
+
+                                            <motion.div
+                                                whileHover={{
+                                                    rotate: 8,
+                                                    scale: 1.1,
+                                                }}
+                                                className={`
+p - 5
+rounded - 3xl
+mb - 5
+                          ${config.bg}
+                          ${config.color}
+shadow - lg
+    `}
+                                            >
+                                                <Icon size={32} />
+                                            </motion.div>
+
+                                            <h3 className="font-bold text-lg text-default-800 dark:text-white group-hover:text-primary transition-colors">
+                                                {spec}
+                                            </h3>
+
+                                            <p className="text-xs text-default-400 mt-2 opacity-0 group-hover:opacity-100 transition duration-300">
+                                                View Specialists →
+                                            </p>
                                         </div>
-
-                                        <h3 className="font-bold text-default-800 text-base tracking-tight transition-colors group-hover:text-primary">
-                                            {spec}
-                                        </h3>
-
-                                        <span className="text-xs text-default-400 mt-1 opacity-0 group-hover:opacity-105 transition-opacity duration-300">
-                                            View Doctors →
-                                        </span>
                                     </Card>
                                 </Link>
                             </motion.div>
@@ -105,23 +193,42 @@ export default function SpecializationsSection() {
                     })}
                 </div>
 
-                {/* CTA Action Link */}
+                {/* CTA */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.3 }}
-                    className="text-center mt-12"
+                    className="text-center mt-16"
                 >
                     <Link
                         href="/find-doctors"
-                        className="inline-flex items-center gap-2 px-6 py-3 font-semibold text-sm rounded-full text-primary border-2 border-primary/30 hover:border-primary bg-transparent hover:bg-primary/5 transition-all duration-200 shadow-sm"
+                        className="
+              inline-flex
+              items-center
+              gap-3
+              px-8
+              py-4
+              rounded-2xl
+              bg-gradient-to-r
+              from-blue-600
+              via-purple-600
+              to-pink-500
+              text-white
+              font-semibold
+              shadow-xl
+              hover:scale-105
+              transition-all
+              duration-300
+            "
                     >
-                        View All Specializations
-                        <FaArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                        Explore All Specializations
+                        <FaArrowRight />
                     </Link>
                 </motion.div>
+
             </div>
         </section>
     );
 }
+

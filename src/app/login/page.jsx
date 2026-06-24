@@ -39,7 +39,7 @@ export default function LoginPage() {
             }));
         }
     };
-
+    
     const validateForm = () => {
         const tempErrors = {};
         if (!formData.email) {
