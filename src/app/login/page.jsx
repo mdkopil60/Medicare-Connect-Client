@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { Input, Button, Card } from "@heroui/react";
 import Link from "next/link";
@@ -8,9 +7,6 @@ import { toast } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 import { EyeFilledIcon, EyeSlashFilledIcon } from "@/components/Icons";
 import { signIn } from "@/lib/auth-client";
-
-
-
 
 export default function LoginPage() {
     const router = useRouter();

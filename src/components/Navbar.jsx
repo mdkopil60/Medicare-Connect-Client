@@ -3,22 +3,32 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { authClient } from "@/lib/auth-client"; 
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
-    const router = useRouter();
 
     const { data: session, isPending } = authClient.useSession();
     const user = session?.user;
+
+    // Define the map outside or inside component
+    const dashboardLinks = {
+        patient: '/dashboard/patient',
+        doctor: '/dashboard/doctor',
+        admin: '/dashboard/admin'
+    };
+
+    // Determine the dashboard path safely
+    const dashboardHref = user?.role ? (dashboardLinks[user.role] || '/dashboard') : '/dashboard';
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    // ... handleLogout and JSX ...
     const handleLogout = async () => {
         await authClient.signOut({
             fetchOptions: {
@@ -57,7 +67,13 @@ export default function Navbar() {
                         <Link href="/find-doctors" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Find Doctors</Link>
                         <Link href="/about" className="hover:text-blue-600 dark:hover:text-blue-400 transition">About Us</Link>
                         <Link href="/contact" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Contact Us</Link>
-                        <Link href="/dashboard" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Dashboard</Link>
+                        {/* Replace the hardcoded link in both menus with: */}
+                        <Link
+                            href={dashboardHref}
+                            className="hover:text-blue-600 dark:hover:text-blue-400 transition"
+                        >
+                            Dashboard
+                        </Link>
                     </div>
 
                     {/* Right Side (Auth Buttons) */}
@@ -118,7 +134,13 @@ export default function Navbar() {
                         <Link href="/find-doctors" onClick={() => setIsMenuOpen(false)}>Find Doctors</Link>
                         <Link href="/about" onClick={() => setIsMenuOpen(false)}>About Us</Link>
                         <Link href="/contact" onClick={() => setIsMenuOpen(false)}>Contact Us</Link>
-                        <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+                        {/* Replace the hardcoded link in both menus with: */}
+                        <Link
+                            href={dashboardHref}
+                            className="hover:text-blue-600 dark:hover:text-blue-400 transition"
+                        >
+                            Dashboard
+                        </Link>
 
                         <hr className="dark:border-gray-700" />
 

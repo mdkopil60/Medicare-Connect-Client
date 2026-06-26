@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
                                 </div>
 
                                 <p className="text-default-600 mb-5">
-                                    "{review.comment}"
+                                    {review.comment}
                                 </p>
 
                                 <div>

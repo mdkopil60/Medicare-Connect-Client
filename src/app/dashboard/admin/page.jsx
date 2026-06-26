@@ -13,13 +13,15 @@ export default function AdminDashboardOverview() {
         const fetchAnalytics = async () => {
             try {
                 setLoading(true);
-                const token = localStorage.getItem("access-token");
+                // Better Auth কুকি ব্যবহার করে, তাই টোকেনের প্রয়োজন নেই।
+                // withCredentials: true দেওয়া বাধ্যতামূলক যেন কুকিগুলো ব্যাকএন্ডে যায়।
                 const res = await axios.get('http://localhost:5000/admin/dashboard-stats', {
-                    headers: { authorization: `Bearer ${token}` }
+                    withCredentials: true
                 });
                 setAnalytics(res.data);
             } catch (err) {
                 console.error("Failed to load analytics:", err);
+                // এখানে প্রয়োজনে এরর স্টেট হ্যান্ডেল করতে পারেন
             } finally {
                 setLoading(false);
             }
@@ -27,7 +29,6 @@ export default function AdminDashboardOverview() {
         fetchAnalytics();
     }, []);
 
-    // ১. লোডিং স্টেট হ্যান্ডলিং
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
@@ -37,12 +38,10 @@ export default function AdminDashboardOverview() {
         );
     }
 
-    // ২. এরর বা ডাটা না থাকলে হ্যান্ডলিং
     if (!analytics) {
-        return <div className="text-center p-10 text-slate-500">Unable to load dashboard data. Please check your connection.</div>;
+        return <div className="text-center p-10 text-slate-500">Unable to load dashboard data. Please check your connection or permissions.</div>;
     }
 
-    // ৩. মূল রেন্ডারিং (ডাটা থাকলে)
     return (
         <div className="space-y-6">
             <div>
