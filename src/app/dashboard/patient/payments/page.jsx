@@ -10,15 +10,16 @@ export default function PaymentHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // 🔄 ব্যাকএন্ড থেকে পেমেন্ট হিস্ট্রি লোড করা
+    // 🔄 ব্যাকএন্ড থেকে নির্দিষ্ট ইউজারের পেমেন্ট হিস্ট্রি লোড করা
     useEffect(() => {
         const fetchPaymentHistory = async () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem("access-token");
 
-                // আপনার ব্যাকএন্ড এন্ডপয়েন্ট (প্রয়োজনে ইউআরএল পরিবর্তন করে নিন)
-                const res = await axios.get("http://localhost:5000/appointments", {
+                // যদি আপনার লোকাল স্টোরেজে বা কোনো স্টেট ম্যানেজমেন্টে ইউজারের ইমেইল সেভ করা থাকে
+                // তবে সেটি কোয়েরি প্যারামিটারে পাঠাতে পারেন, যেমন: `http://localhost:5000/payments?email=${userEmail}`
+                const res = await axios.get("http://localhost:5000/payments", {
                     headers: {
                         authorization: `Bearer ${token}`
                     }
@@ -26,7 +27,7 @@ export default function PaymentHistoryPage() {
 
                 // শুধুমাত্র 'paid' স্ট্যাটাসের অ্যাপয়েন্টমেন্ট ফিল্টার করে সেট করা
                 const paidAppointments = (res.data || []).filter(
-                    (app) => app.paymentStatus === "paid"
+                    (app) => app.paymentStatus === "paid" || app.status === "paid"
                 );
 
                 setPayments(paidAppointments);
@@ -40,7 +41,7 @@ export default function PaymentHistoryPage() {
         fetchPaymentHistory();
     }, []);
 
-    // Filter based on search input (Doctor name or Transaction ID)
+    // ফিল্টারিং লজিক (সার্চ বার এর জন্য)
     const filteredPayments = payments.filter((item) => {
         const doctorName = item.doctorId?.doctorName || item.doctorName || "";
         const txnId = item.transactionId || item.id || "";
@@ -55,7 +56,7 @@ export default function PaymentHistoryPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <Spinner size="lg" color="emerald" />
-                <p className="mt-4 text-default-500 font-medium animate-pulse">Loading Payment Logs...</p>
+                <p className="mt-4 text-default-500 font-medium animate-pulse">Loading Your Payment Logs...</p>
             </div>
         );
     }
@@ -93,14 +94,13 @@ export default function PaymentHistoryPage() {
                 <Card className="p-12 text-center border-dashed border-2 border-default-200 bg-default-50/10">
                     <div className="flex flex-col items-center justify-center gap-4">
                         <Receipt className="w-12 h-12 text-default-400" />
-                        <p className="text-lg font-semibold text-default-600">No payment records found.</p>
+                        <p className="text-lg font-semibold text-default-600">No payment records found for your account.</p>
                     </div>
                 </Card>
             ) : (
-                // PAYMENTS GRID LAYOUT
+                /* PAYMENTS GRID LAYOUT */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredPayments.map((item) => {
-                        // ব্যাকএন্ড ডাটা স্ট্রাকচার হ্যান্ডেল করা (Populated or Flat)
                         const doctorName = item.doctorId?.doctorName || item.doctorName || "Expert Doctor";
                         const specialty = item.doctorId?.specialization || item.specialty || "Specialist";
                         const txnId = item.transactionId || "N/A";
@@ -113,10 +113,8 @@ export default function PaymentHistoryPage() {
                             >
                                 {/* Main Content Card */}
                                 <div className="p-6">
-                                    {/* Card Top Row */}
                                     <div className="flex justify-between items-start gap-3 mb-5">
                                         <div className="flex items-center gap-3.5">
-                                            {/* Emerald Amount Icon Badge */}
                                             <div className="w-12 h-12 rounded-2xl bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 flex items-center justify-center font-bold text-lg transition-transform group-hover:scale-105 duration-300">
                                                 <DollarSign className="w-5 h-5" />
                                             </div>
@@ -130,7 +128,6 @@ export default function PaymentHistoryPage() {
                                             </div>
                                         </div>
 
-                                        {/* Status Success Badge */}
                                         <Chip
                                             variant="flat"
                                             color="success"
@@ -142,7 +139,7 @@ export default function PaymentHistoryPage() {
                                         </Chip>
                                     </div>
 
-                                    {/* Central Info Grid Structure */}
+                                    {/* Central Info Structure */}
                                     <div className="p-4 rounded-2xl bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100/30 flex flex-col gap-3 mb-4">
                                         <div className="flex items-center justify-between text-sm font-medium text-default-700">
                                             <div className="flex items-center gap-2.5">
@@ -174,14 +171,13 @@ export default function PaymentHistoryPage() {
                                     </div>
                                 </div>
 
-                                {/* Bottom Total Amount Display Area */}
+                                {/* Bottom Charged Section */}
                                 <div className="px-6 pb-6 pt-2 flex items-center justify-between bg-gradient-to-t from-emerald-50/20 to-transparent">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] uppercase font-bold tracking-widest text-default-400">Total Charged</span>
                                         <span className="text-2xl font-black text-default-800 tracking-tight">{amount}</span>
                                     </div>
 
-                                    {/* Print/View Invoice Button */}
                                     <Button
                                         className="font-bold text-xs h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all shadow-sm px-4"
                                         variant="flat"
