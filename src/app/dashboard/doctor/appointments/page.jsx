@@ -18,7 +18,6 @@ export default function AppointmentRequestsPage() {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
     };
-
     const fetchAppointments = async (email) => {
         try {
             setLoading(true);
@@ -45,7 +44,7 @@ export default function AppointmentRequestsPage() {
     const updateAppointmentStatus = async (id, status) => {
         try {
             const res = await axios.patch(
-                `http://localhost:5000/appointments/status/${id}`, // ✅ fixed URL
+                `http://localhost:5000/appointments/status/${id}`,
                 { status },
                 getAuthHeaders()
             );
@@ -81,7 +80,6 @@ export default function AppointmentRequestsPage() {
             }
         });
     };
-
     const handleReject = (id) => {
         Swal.fire({
             title: 'Reject Appointment?',
