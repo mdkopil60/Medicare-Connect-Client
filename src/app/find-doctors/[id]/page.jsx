@@ -6,6 +6,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaStar, FaRegClock, FaMoneyBillWave, FaHospital, FaUserMd, FaGraduationCap, FaNotesMedical } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import { authClient } from '@/lib/auth-client'; // ✅ Better Auth
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -13,13 +14,14 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
     const params = use(paramsPromise);
     const { id } = params;
 
+    // ✅ Better Auth দিয়ে logged-in user নেওয়া হচ্ছে
+    const { data: session, isPending: sessionLoading } = authClient.useSession();
+    const currentUser = session?.user;
+
     const [doctor, setDoctor] = useState(null);
     const [loading, setLoading] = useState(true);
     const [bookingData, setBookingData] = useState({ symptoms: '', selectedDate: '', selectedSlot: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // বাস্তব প্রজেক্টে এটি আপনার Auth Context / Firebase Auth থেকে আসবে
-    const currentUser = { id: "patient_123", email: "patient@example.com" };
 
     useEffect(() => {
         if (!id) return;
@@ -35,7 +37,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
             });
     }, [id]);
 
-    if (loading) return (
+    if (loading || sessionLoading) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
             <p className="mt-4 text-gray-500 font-medium animate-pulse">Loading Premium Profile...</p>
@@ -52,7 +54,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
     return (
         <div className="bg-slate-50/50 dark:bg-slate-950 min-h-screen py-10 transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
-
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
                     {/* Left Side: Doctor Info */}
@@ -72,7 +73,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                     {doctor.specialization}
                                 </span>
                                 <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-3 tracking-tight">{doctor.doctorName}</h1>
-
                                 <p className="text-gray-600 dark:text-gray-300 font-medium mt-2 flex items-center justify-center sm:justify-start gap-2">
                                     <FaGraduationCap className="text-slate-400 text-lg flex-shrink-0" />
                                     <span>{doctor.qualifications}</span>
@@ -81,7 +81,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                     <FaUserMd className="text-slate-400 flex-shrink-0" />
                                     <span>{doctor.experience} Years of Expert Experience</span>
                                 </p>
-
                                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-4 bg-amber-50/60 dark:bg-amber-950/20 w-fit px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
                                     <div className="flex items-center text-amber-500 gap-0.5">
                                         <FaStar /> <span className="font-bold ml-1 text-gray-900 dark:text-amber-400">{typeof doctor.averageRating === 'number' ? doctor.averageRating.toFixed(1) : doctor.averageRating || '0.0'}</span>
@@ -115,7 +114,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                         </div>
                     </div>
 
-                    {/* Right Side: Booking Area */}
+                    {/* Right Side: Booking */}
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 sticky top-6">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2.5">
                             <span className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400"><FaRegClock className="text-sm" /></span>
@@ -166,7 +165,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                         <CheckoutForm
                                             doctor={doctor}
                                             bookingData={bookingData}
-                                            currentUser={currentUser}
+                                            currentUser={currentUser} // ✅ real user পাঠানো হচ্ছে
                                             isSubmitting={isSubmitting}
                                             setIsSubmitting={setIsSubmitting}
                                         />
@@ -179,7 +178,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                             )}
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -195,6 +193,17 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
         event.preventDefault();
         if (!stripe || !elements) return;
 
+        // ✅ Login check
+        if (!currentUser?.email) {
+            Swal.fire({
+                title: 'Not Logged In!',
+                text: 'Please login to book an appointment.',
+                icon: 'warning',
+                confirmButtonColor: '#0d9488'
+            });
+            return;
+        }
+
         const card = elements.getElement(CardElement);
         if (card == null) return;
 
@@ -205,7 +214,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             const token = localStorage.getItem('access-token');
             const headers = { headers: { authorization: `Bearer ${token}` } };
 
-            // ১. ক্রিয়েট পেমেন্ট ইনটেন্ট উইথ টোকেন
+            // ১. Payment Intent তৈরি
             const res = await axios.post(
                 'http://localhost:5000/create-payment-intent',
                 { price: doctor.consultationFee },
@@ -213,11 +222,14 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             );
             const clientSecret = res.data.clientSecret;
 
-            // ২. কার্ড পেমেন্ট কনফার্মেশন
+            // ২. Card Payment Confirm
             const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
                 payment_method: {
                     card: card,
-                    billing_details: { email: currentUser.email || 'anonymous@test.com' },
+                    billing_details: {
+                        email: currentUser.email,
+                        name: currentUser.name || currentUser.email,
+                    },
                 },
             });
 
@@ -227,26 +239,42 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                 return;
             }
 
-            // ৩. পেমেন্ট সফল হলে ডাটাবেজে অ্যাপয়েন্টমেন্ট সেভ
+            // ৩. Payment সফল হলে DB তে save
             if (paymentIntent.status === 'succeeded') {
                 const appointmentInfo = {
+                    // ✅ Patient এর সব তথ্য
                     patientId: currentUser.id,
+                    patientEmail: currentUser.email,       // ✅ এটাই ছিল missing
+                    patientName: currentUser.name || '',
+
+                    // ✅ Doctor এর সব তথ্য
                     doctorId: doctor._id,
+                    doctorEmail: doctor.email || '',
+                    doctorName: doctor.doctorName || '',   // ✅ payment history তে দেখাবে
+                    specialty: doctor.specialization || '', // ✅ payment history তে দেখাবে
+
+                    // ✅ Appointment তথ্য
                     appointmentDate: bookingData.selectedDate,
                     appointmentTime: bookingData.selectedSlot,
                     appointmentStatus: 'pending',
                     symptoms: bookingData.symptoms,
+
+                    // ✅ Payment তথ্য
                     paymentStatus: 'paid',
                     amount: doctor.consultationFee,
-                    transactionId: paymentIntent.id
+                    transactionId: paymentIntent.id,
                 };
 
-                const saveRes = await axios.post('http://localhost:5000/appointments', appointmentInfo, headers);
+                const saveRes = await axios.post(
+                    'http://localhost:5000/appointments',
+                    appointmentInfo,
+                    headers
+                );
 
                 if (saveRes.data.success) {
                     Swal.fire({
-                        title: 'Appointment Booked!',
-                        text: `Success! Txn ID: ${paymentIntent.id}`,
+                        title: '🎉 Appointment Booked!',
+                        html: `<p>Your appointment has been confirmed.</p><br/><small>Txn ID: <b>${paymentIntent.id}</b></small>`,
                         icon: 'success',
                         confirmButtonColor: '#0d9488'
                     });
@@ -254,8 +282,9 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             }
         } catch (err) {
             console.error(err);
-            setCardError('Failed to process payment with server. Check console for details.');
+            setCardError('Payment failed. Please try again.');
         }
+
         setIsSubmitting(false);
     };
 
@@ -267,7 +296,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                         style: {
                             base: {
                                 fontSize: '15px',
-                                color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#ffffff' : '#1e293b',
+                                color: '#1e293b',
                                 fontFamily: 'Inter, sans-serif',
                                 '::placeholder': { color: '#94a3b8' },
                             },
