@@ -6,7 +6,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FaStar, FaRegClock, FaMoneyBillWave, FaHospital, FaUserMd, FaGraduationCap, FaNotesMedical } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import { authClient } from '@/lib/auth-client'; // ✅ Better Auth
+import { authClient } from '@/lib/auth-client';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -14,7 +14,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
     const params = use(paramsPromise);
     const { id } = params;
 
-    // ✅ Better Auth দিয়ে logged-in user নেওয়া হচ্ছে
     const { data: session, isPending: sessionLoading } = authClient.useSession();
     const currentUser = session?.user;
 
@@ -72,10 +71,16 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400 border border-teal-100 dark:border-teal-900/50 uppercase tracking-wider">
                                     {doctor.specialization}
                                 </span>
-                                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-3 tracking-tight">{doctor.doctorName}</h1>
+                                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mt-3 tracking-tight">
+                                    {doctor.doctorName}
+                                </h1>
                                 <p className="text-gray-600 dark:text-gray-300 font-medium mt-2 flex items-center justify-center sm:justify-start gap-2">
                                     <FaGraduationCap className="text-slate-400 text-lg flex-shrink-0" />
-                                    <span>{doctor.qualifications}</span>
+                                    <span>
+                                        {Array.isArray(doctor.qualifications)
+                                            ? doctor.qualifications.join(', ')
+                                            : doctor.qualifications}
+                                    </span>
                                 </p>
                                 <p className="text-sm text-gray-400 mt-1 flex items-center justify-center sm:justify-start gap-2">
                                     <FaUserMd className="text-slate-400 flex-shrink-0" />
@@ -83,15 +88,23 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </p>
                                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-4 bg-amber-50/60 dark:bg-amber-950/20 w-fit px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
                                     <div className="flex items-center text-amber-500 gap-0.5">
-                                        <FaStar /> <span className="font-bold ml-1 text-gray-900 dark:text-amber-400">{typeof doctor.averageRating === 'number' ? doctor.averageRating.toFixed(1) : doctor.averageRating || '0.0'}</span>
+                                        <FaStar />
+                                        <span className="font-bold ml-1 text-gray-900 dark:text-amber-400">
+                                            {typeof doctor.averageRating === 'number'
+                                                ? doctor.averageRating.toFixed(1)
+                                                : doctor.averageRating || '0.0'}
+                                        </span>
                                     </div>
                                     <span className="text-slate-300 dark:text-slate-700">|</span>
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs font-medium">{doctor.totalReviews || 0} Patient Reviews</span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs font-medium">
+                                        {doctor.totalReviews || 0} Patient Reviews
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="border-t border-slate-100 dark:border-slate-800 my-8"></div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100/80 dark:border-slate-800/60">
                                 <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400">
@@ -99,7 +112,9 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Hospital / Chamber</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-200 mt-1 leading-relaxed">{doctor.hospitalName || 'Not Specified'}</p>
+                                    <p className="font-semibold text-gray-800 dark:text-gray-200 mt-1 leading-relaxed">
+                                        {doctor.hospitalName || 'Not Specified'}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100/80 dark:border-slate-800/60">
@@ -108,46 +123,108 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Consultation Fee</p>
-                                    <p className="font-bold text-emerald-600 dark:text-emerald-400 text-2xl mt-0.5">${doctor.consultationFee}</p>
+                                    <p className="font-bold text-emerald-600 dark:text-emerald-400 text-2xl mt-0.5">
+                                        ${doctor.consultationFee}
+                                    </p>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Available Slots Section */}
+                        {doctor.availableSlots?.length > 0 && (
+                            <div className="mt-8">
+                                <div className="border-t border-slate-100 dark:border-slate-800 mb-6"></div>
+                                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <FaRegClock className="text-teal-500" /> Available Schedule
+                                </h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {doctor.availableSlots.map((slot, index) => {
+                                        const isObject = typeof slot === 'object' && slot !== null;
+                                        return (
+                                            <div
+                                                key={slot?._id || index}
+                                                className="flex items-center gap-3 p-3 rounded-xl border border-teal-100 dark:border-teal-900/40 bg-teal-50/40 dark:bg-teal-950/10"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-teal-500 flex-shrink-0"></div>
+                                                <div>
+                                                    {isObject ? (
+                                                        <>
+                                                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                                {slot.day}
+                                                            </p>
+                                                            <p className="text-xs text-gray-400">
+                                                                {slot.startTime} – {slot.endTime}
+                                                                <span className="ml-2 text-teal-500">
+                                                                    (Max {slot.maxPatients} patients)
+                                                                </span>
+                                                            </p>
+                                                        </>
+                                                    ) : (
+                                                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{slot}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Side: Booking */}
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 sticky top-6">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2.5">
-                            <span className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400"><FaRegClock className="text-sm" /></span>
+                            <span className="p-2 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400">
+                                <FaRegClock className="text-sm" />
+                            </span>
                             <span>Book Appointment</span>
                         </h2>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Select Date</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                                    Select Date
+                                </label>
                                 <input
                                     type="date"
+                                    min={new Date().toISOString().split('T')[0]}
                                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition dark:text-white"
-                                    required
                                     onChange={(e) => setBookingData({ ...bookingData, selectedDate: e.target.value })}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Available Slots</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                                    Available Slots
+                                </label>
                                 <select
                                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition dark:text-white"
-                                    required
                                     onChange={(e) => setBookingData({ ...bookingData, selectedSlot: e.target.value })}
+                                    defaultValue=""
                                 >
-                                    <option value="">Choose an expert slot</option>
-                                    {doctor.availableSlots?.map((slot, index) => (
-                                        <option key={index} value={slot}>{slot}</option>
-                                    ))}
+                                    <option value="" disabled>Choose a slot</option>
+                                    {doctor.availableSlots?.map((slot, index) => {
+                                        // ✅ object হলে string বানাও
+                                        const isObject = typeof slot === 'object' && slot !== null;
+                                        const label = isObject
+                                            ? `${slot.day} | ${slot.startTime} – ${slot.endTime} (Max: ${slot.maxPatients})`
+                                            : slot;
+                                        const value = isObject
+                                            ? `${slot.day} ${slot.startTime} – ${slot.endTime}`
+                                            : slot;
+                                        return (
+                                            <option key={slot?._id || index} value={value}>
+                                                {label}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Symptoms / Notes</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                                    Symptoms / Notes
+                                </label>
                                 <textarea
                                     placeholder="Briefly describe your health condition..."
                                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition dark:text-white resize-none"
@@ -165,7 +242,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                         <CheckoutForm
                                             doctor={doctor}
                                             bookingData={bookingData}
-                                            currentUser={currentUser} // ✅ real user পাঠানো হচ্ছে
+                                            currentUser={currentUser}
                                             isSubmitting={isSubmitting}
                                             setIsSubmitting={setIsSubmitting}
                                         />
@@ -173,7 +250,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </div>
                             ) : (
                                 <div className="text-center p-4 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-900 text-xs text-gray-400 font-medium">
-                                    Please select a date and slot to unlock secure payment option.
+                                    Please select a date and slot to unlock secure payment.
                                 </div>
                             )}
                         </div>
@@ -193,7 +270,6 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
         event.preventDefault();
         if (!stripe || !elements) return;
 
-        // ✅ Login check
         if (!currentUser?.email) {
             Swal.fire({
                 title: 'Not Logged In!',
@@ -205,7 +281,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
         }
 
         const card = elements.getElement(CardElement);
-        if (card == null) return;
+        if (!card) return;
 
         setIsSubmitting(true);
         setCardError('');
@@ -225,7 +301,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             // ২. Card Payment Confirm
             const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
                 payment_method: {
-                    card: card,
+                    card,
                     billing_details: {
                         email: currentUser.email,
                         name: currentUser.name || currentUser.email,
@@ -239,27 +315,20 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                 return;
             }
 
-            // ৩. Payment সফল হলে DB তে save
+            // ৩. Payment সফল — DB তে save
             if (paymentIntent.status === 'succeeded') {
                 const appointmentInfo = {
-                    // ✅ Patient এর সব তথ্য
                     patientId: currentUser.id,
-                    patientEmail: currentUser.email,       // ✅ এটাই ছিল missing
+                    patientEmail: currentUser.email,
                     patientName: currentUser.name || '',
-
-                    // ✅ Doctor এর সব তথ্য
                     doctorId: doctor._id,
                     doctorEmail: doctor.email || '',
-                    doctorName: doctor.doctorName || '',   // ✅ payment history তে দেখাবে
-                    specialty: doctor.specialization || '', // ✅ payment history তে দেখাবে
-
-                    // ✅ Appointment তথ্য
+                    doctorName: doctor.doctorName || '',
+                    specialty: doctor.specialization || '',
                     appointmentDate: bookingData.selectedDate,
                     appointmentTime: bookingData.selectedSlot,
                     appointmentStatus: 'pending',
                     symptoms: bookingData.symptoms,
-
-                    // ✅ Payment তথ্য
                     paymentStatus: 'paid',
                     amount: doctor.consultationFee,
                     transactionId: paymentIntent.id,
@@ -305,7 +374,9 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                     }}
                 />
             </div>
-            {cardError && <p className="text-red-500 text-xs font-semibold">{cardError}</p>}
+            {cardError && (
+                <p className="text-red-500 text-xs font-semibold">{cardError}</p>
+            )}
             <button
                 type="submit"
                 disabled={!stripe || isSubmitting}

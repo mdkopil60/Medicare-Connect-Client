@@ -1,206 +1,283 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button, Card, Spinner } from '@heroui/react';
-import { FaUserMd, FaGraduationCap, FaBriefcase, FaDollarSign, FaClock, FaEdit } from 'react-icons/fa';
+import { useSession } from '@/lib/auth-client';
+import { Card, Spinner } from '@heroui/react';
+import { FaSave, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
-export default function DoctorProfileManagementPage() {
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
+const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const SPECIALIZATIONS = [
+    'Cardiologist', 'Pediatrician', 'Neurologist', 'Orthopedic Surgeon',
+    'Dermatologist', 'General Physician', 'Gynecologist', 'Psychiatrist', 'ENT Specialist'
+];
 
-    // 🔑 সিকিউরিটি হেডার গেটার মেথড
+export default function DoctorProfilePage() {
+    const { data: session, isPending } = useSession();
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    const [form, setForm] = useState({
+        doctorName: '', specialization: '', hospitalName: '',
+        experience: '', consultationFee: '', profileImage: '',
+        qualifications: [], availableDays: [], availableSlots: []
+    });
+
+    const [qualInput, setQualInput] = useState('');
+    const [newSlot, setNewSlot] = useState({
+        day: 'Saturday', startTime: '09:00', endTime: '13:00', maxPatients: 10
+    });
+
     const getAuthHeaders = () => {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
     };
 
-    // 📥 ১. ডেটাবেজ থেকে ডক্টরের নিজস্ব প্রোফাইল ডেটা লোড করা (Read)
-    const fetchDoctorProfile = async () => {
+    // ডাটাবেজ থেকে doctor profile লোড
+    useEffect(() => {
+        if (isPending || !session?.user?.email) return;
+        const email = session.user.email;
+
+        axios.get(`http://localhost:5000/doctor/profile/${email}`, getAuthHeaders())
+            .then(res => {
+                const d = res.data;
+                setForm({
+                    doctorName: d.doctorName || '',
+                    specialization: d.specialization || '',
+                    hospitalName: d.hospitalName || '',
+                    experience: d.experience || '',
+                    consultationFee: d.consultationFee || '',
+                    profileImage: d.profileImage || '',
+                    qualifications: d.qualifications
+                        ? (typeof d.qualifications === 'string'
+                            ? d.qualifications.split(',').map(q => q.trim())
+                            : d.qualifications)
+                        : [],
+                    availableDays: d.availableDays || [],
+                    availableSlots: d.availableSlots || []
+                });
+            })
+            .catch(err => console.error('Profile load error:', err))
+            .finally(() => setLoading(false));
+    }, [session, isPending]);
+
+    const handleChange = (e) => {
+        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    // Qualification add/remove
+    const addQual = () => {
+        if (!qualInput.trim()) return;
+        setForm(prev => ({ ...prev, qualifications: [...prev.qualifications, qualInput.trim()] }));
+        setQualInput('');
+    };
+    const removeQual = (i) => {
+        setForm(prev => ({ ...prev, qualifications: prev.qualifications.filter((_, idx) => idx !== i) }));
+    };
+
+    // Day toggle
+    const toggleDay = (day) => {
+        setForm(prev => ({
+            ...prev,
+            availableDays: prev.availableDays.includes(day)
+                ? prev.availableDays.filter(d => d !== day)
+                : [...prev.availableDays, day]
+        }));
+    };
+
+    // Slot add/remove
+    const addSlot = () => {
+        const slot = { ...newSlot, maxPatients: parseInt(newSlot.maxPatients) };
+        setForm(prev => ({
+            ...prev,
+            availableSlots: [...prev.availableSlots, slot],
+            availableDays: [...new Set([...prev.availableDays, slot.day])]
+        }));
+    };
+    const removeSlot = (i) => {
+        setForm(prev => ({ ...prev, availableSlots: prev.availableSlots.filter((_, idx) => idx !== i) }));
+    };
+
+    // Save
+    const handleSave = async () => {
+        const email = session?.user?.email;
+        if (!email) return;
         try {
-            setLoading(true);
-            const res = await axios.get('http://localhost:5000/doctors/profile/me', getAuthHeaders());
-            setProfile(res.data);
+            setSaving(true);
+            await axios.put(
+                `http://localhost:5000/doctor/profile/${email}`,
+                form,
+                getAuthHeaders()
+            );
+            Swal.fire({ icon: 'success', title: 'Profile updated!', timer: 1800, showConfirmButton: false });
         } catch (err) {
-            console.error("Error fetching doctor profile:", err);
-            Swal.fire({ icon: 'error', title: 'Failed to load profile details' });
+            Swal.fire({ icon: 'error', title: 'Save failed', text: err.response?.data?.message || err.message });
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
-    useEffect(() => {
-        fetchDoctorProfile();
-    }, []);
-
-    // 🔄 ২. SweetAlert2 ফর্ম পপআপের মাধ্যমে প্রোফাইল ডেটা আপডেট করা (Update)
-    const openEditProfilePopup = () => {
-        if (!profile) return;
-
-        Swal.fire({
-            title: 'Update Profile Details',
-            html: `
-        <div style="text-align: left; font-family: sans-serif;">
-          <div style="margin-bottom: 12px;">
-            <label style="display:block; font-size:12px; font-weight:bold; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Qualifications</label>
-            <input type="text" id="swal-qualifications" value="${profile.qualifications || ''}" placeholder="e.g. MBBS, MD" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none;" />
-          </div>
-
-          <div style="margin-bottom: 12px;">
-            <label style="display:block; font-size:12px; font-weight:bold; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Experience Description</label>
-            <input type="text" id="swal-experience" value="${profile.experience || ''}" placeholder="e.g. 10 Years of Experience" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none;" />
-          </div>
-
-          <div style="margin-bottom: 12px;">
-            <label style="display:block; font-size:12px; font-weight:bold; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Consultation Fee ($ / BDT)</label>
-            <input type="number" id="swal-fee" value="${profile.consultationFee || 0}" min="0" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none;" />
-          </div>
-
-          <div>
-            <label style="display:block; font-size:12px; font-weight:bold; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Available Slots Summary</label>
-            <textarea id="swal-slots" placeholder="e.g. Mon, Wed (09:00 AM - 01:00 PM)" style="width:100%; height:60px; padding:10px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; resize: none;">${profile.slotsDescription || ''}</textarea>
-          </div>
+    if (isPending || loading) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <Spinner size="lg" color="primary" />
         </div>
-      `,
-            showCancelButton: true,
-            confirmButtonColor: '#0d9488',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Update Profile',
-            cancelButtonText: 'Cancel',
-            focusConfirm: false,
-            preConfirm: () => {
-                const qualifications = document.getElementById('swal-qualifications').value;
-                const experience = document.getElementById('swal-experience').value;
-                const consultationFee = document.getElementById('swal-fee').value;
-                const slotsDescription = document.getElementById('swal-slots').value;
-
-                if (!qualifications || !experience || !consultationFee || !slotsDescription) {
-                    Swal.showValidationMessage('All profile fields are required');
-                    return false;
-                }
-                return { qualifications, experience, consultationFee: parseInt(consultationFee), slotsDescription };
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    // 🔄 ব্যাকএন্ড এপিআই কল: প্রোফাইল ডেটা আপডেট
-                    const res = await axios.patch('http://localhost:5000/doctors/profile/update', result.value, getAuthHeaders());
-
-                    // ডেটাবেজের লেটেস্ট রেসপন্স দিয়ে ফ্রন্টএন্ড স্টেট আপডেট
-                    setProfile(res.data);
-                    Swal.fire({ icon: 'success', title: 'Profile updated successfully!', timer: 1500, showConfirmButton: false });
-                } catch (err) {
-                    console.error("Error updating doctor profile:", err);
-                    Swal.fire({ icon: 'error', title: 'Update failed', text: err.response?.data?.message || 'Server error occurred.' });
-                }
-            }
-        });
-    };
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-                <Spinner size="lg" color="teal" />
-                <p className="text-sm text-slate-500 font-medium animate-pulse">Loading secure profile details...</p>
-            </div>
-        );
-    }
+    );
 
     return (
-        <div className="p-6 max-w-4xl mx-auto min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
-
-            {/* Header section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                        <FaUserMd className="text-teal-600" /> Profile Management
-                    </h1>
-                    <p className="text-xs text-slate-400 font-medium mt-1">View and maintain your professional medical details</p>
-                </div>
-                <Button
-                    onPress={openEditProfilePopup}
-                    color="primary"
-                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md shadow-teal-600/10 cursor-pointer"
-                    startContent={<FaEdit />}
-                >
-                    Edit Profile Details
-                </Button>
+        <div className="max-w-3xl mx-auto p-6 space-y-5">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Profile management</h1>
+                <p className="text-sm text-slate-400 mt-1">তথ্য আপডেট করুন — সরাসরি ডাটাবেজে সেভ হবে</p>
             </div>
 
-            {/* Profile Metrics Layout */}
-            {profile && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                    {/* Left Card: Doctor Overview */}
-                    <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex flex-col items-center text-center">
-                        <div className="w-24 h-24 rounded-full bg-teal-50 dark:bg-teal-950/40 border border-teal-100/50 dark:border-teal-900/30 flex items-center justify-center mb-4">
-                            <FaUserMd className="text-4xl text-teal-600" />
+            {/* Basic Info */}
+            <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Basic information</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                        { label: 'Doctor name', name: 'doctorName', type: 'text' },
+                        { label: 'Hospital / Clinic', name: 'hospitalName', type: 'text' },
+                        { label: 'Experience (years)', name: 'experience', type: 'number' },
+                        { label: 'Consultation fee ($)', name: 'consultationFee', type: 'number' },
+                        { label: 'Profile image URL', name: 'profileImage', type: 'text' },
+                    ].map(f => (
+                        <div key={f.name} className="flex flex-col gap-1">
+                            <label className="text-xs text-slate-500">{f.label}</label>
+                            <input
+                                type={f.type} name={f.name} value={form[f.name]}
+                                onChange={handleChange}
+                                className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:border-teal-400"
+                            />
                         </div>
-                        <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{profile.name}</h2>
-                        <p className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">{profile.specialty}</p>
-                        <p className="text-xs text-slate-400 font-medium mt-1">{profile.email}</p>
-                    </Card>
-
-                    {/* Right Card: Dynamic Configurable Attributes */}
-                    <Card className="md:col-span-2 p-6 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 space-y-6">
-
-                        {/* Qualifications Row */}
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 mt-0.5">
-                                <FaGraduationCap className="text-lg text-teal-600" />
-                            </div>
-                            <div>
-                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Qualifications</span>
-                                <p className="text-slate-700 dark:text-slate-200 font-semibold mt-1 text-sm md:text-base">
-                                    {profile.qualifications}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Experience Row */}
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 mt-0.5">
-                                <FaBriefcase className="text-lg text-teal-600" />
-                            </div>
-                            <div>
-                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Clinical Experience</span>
-                                <p className="text-slate-700 dark:text-slate-200 font-semibold mt-1 text-sm md:text-base">
-                                    {profile.experience}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Fee Row */}
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 mt-0.5">
-                                <FaDollarSign className="text-lg text-teal-600" />
-                            </div>
-                            <div>
-                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Consultation Fee</span>
-                                <p className="text-slate-800 dark:text-teal-400 font-mono font-black mt-1 text-base md:text-lg">
-                                    {profile.consultationFee} BDT / USD
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Available Slots Row */}
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 mt-0.5">
-                                <FaClock className="text-lg text-teal-600" />
-                            </div>
-                            <div>
-                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Summary Slots</span>
-                                <p className="text-slate-600 dark:text-slate-300 text-xs md:text-sm mt-1 bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-3 rounded-xl leading-relaxed whitespace-pre-line">
-                                    {profile.slotsDescription}
-                                </p>
-                            </div>
-                        </div>
-
-                    </Card>
-
+                    ))}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-500">Specialization</label>
+                        <select
+                            name="specialization" value={form.specialization} onChange={handleChange}
+                            className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:border-teal-400"
+                        >
+                            {SPECIALIZATIONS.map(s => <option key={s}>{s}</option>)}
+                        </select>
+                    </div>
                 </div>
-            )}
+            </Card>
+
+            {/* Qualifications */}
+            <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Qualifications</h2>
+                <div className="flex flex-wrap gap-2 mb-3">
+                    {form.qualifications.map((q, i) => (
+                        <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-medium">
+                            {q}
+                            <FaTimes className="cursor-pointer text-slate-400 hover:text-red-500" onClick={() => removeQual(i)} />
+                        </span>
+                    ))}
+                </div>
+                <div className="flex gap-2">
+                    <input
+                        value={qualInput} onChange={e => setQualInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addQual()}
+                        placeholder="যেমন: MBBS, MD, FCPS"
+                        className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 focus:outline-none focus:border-teal-400"
+                    />
+                    <button onClick={addQual} className="flex items-center gap-1 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700">
+                        <FaPlus className="text-xs" /> Add
+                    </button>
+                </div>
+            </Card>
+
+            {/* Available Days */}
+            <Card className="p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Available days</h2>
+                <div className="flex flex-wrap gap-2 mb-6">
+                    {DAYS.map(day => (
+                        <button
+                            key={day} onClick={() => toggleDay(day)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${form.availableDays.includes(day)
+                                    ? 'bg-teal-600 text-white border-teal-600'
+                                    : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-teal-400'
+                                }`}
+                        >{day}</button>
+                    ))}
+                </div>
+
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Time slots</h2>
+
+                {/* Existing slots */}
+                {form.availableSlots.length > 0 && (
+                    <div className="mb-4 overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr className="text-xs text-slate-400 uppercase">
+                                    <th className="text-left py-2 px-2">Day</th>
+                                    <th className="text-left py-2 px-2">Start</th>
+                                    <th className="text-left py-2 px-2">End</th>
+                                    <th className="text-left py-2 px-2">Max patients</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {form.availableSlots.map((slot, i) => (
+                                    <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
+                                        <td className="py-2 px-2 text-slate-600 dark:text-slate-300">{slot.day}</td>
+                                        <td className="py-2 px-2 text-slate-600 dark:text-slate-300">{slot.startTime}</td>
+                                        <td className="py-2 px-2 text-slate-600 dark:text-slate-300">{slot.endTime}</td>
+                                        <td className="py-2 px-2 text-slate-600 dark:text-slate-300">{slot.maxPatients}</td>
+                                        <td className="py-2 px-2">
+                                            <button onClick={() => removeSlot(i)} className="text-red-400 hover:text-red-600">
+                                                <FaTrash className="text-xs" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Add new slot */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
+                    {[
+                        { label: 'Day', type: 'select', key: 'day', options: DAYS },
+                        { label: 'Start', type: 'time', key: 'startTime' },
+                        { label: 'End', type: 'time', key: 'endTime' },
+                        { label: 'Max patients', type: 'number', key: 'maxPatients' },
+                    ].map(f => (
+                        <div key={f.key} className="flex flex-col gap-1">
+                            <label className="text-xs text-slate-400">{f.label}</label>
+                            {f.type === 'select' ? (
+                                <select
+                                    value={newSlot[f.key]}
+                                    onChange={e => setNewSlot(p => ({ ...p, [f.key]: e.target.value }))}
+                                    className="border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-2 text-xs bg-white dark:bg-slate-900 focus:outline-none"
+                                >
+                                    {f.options.map(o => <option key={o}>{o}</option>)}
+                                </select>
+                            ) : (
+                                <input
+                                    type={f.type} value={newSlot[f.key]}
+                                    onChange={e => setNewSlot(p => ({ ...p, [f.key]: e.target.value }))}
+                                    className="border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-2 text-xs bg-white dark:bg-slate-900 focus:outline-none"
+                                />
+                            )}
+                        </div>
+                    ))}
+                    <button onClick={addSlot} className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-600 text-white rounded-lg text-xs hover:bg-teal-700">
+                        <FaPlus /> Add slot
+                    </button>
+                </div>
+            </Card>
+
+            {/* Save */}
+            <div className="flex justify-end gap-3 pb-6">
+                <button
+                    onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700 disabled:opacity-60"
+                >
+                    <FaSave /> {saving ? 'Saving...' : 'Save profile'}
+                </button>
+            </div>
         </div>
     );
 }
