@@ -1,8 +1,6 @@
 export const authHeader = async () => {
     const token = await getUserToken();
 
-    // টোকেন না থাকলে সরাসরি একটি খালি অবজেক্ট রিটার্ন করুন। 
-    // এতে Authorization হেডারটি তৈরিই হবে না।
     if (!token) {
         return {};
     }
@@ -17,7 +15,6 @@ export const serverMutation = async (path, data, method = 'POST') => {
         ...await authHeader()
     };
 
-    // এখানে খেয়াল করুন: ${baseUrl}${path} - মাঝের স্পেসটি সরিয়ে দিয়েছি
     const res = await fetch(`${baseUrl}${path}`, {
         method: method,
         headers: headers,
