@@ -14,7 +14,6 @@ export default function FindDoctorsPage() {
     useEffect(() => {
         axios.get("http://localhost:5000/doctors?limit=20")
             .then((res) => {
-                // ব্যাকএন্ড অ্যারে ফরম্যাট অনুযায়ী ডেটা সেট করা
                 setDoctors(res.data?.doctors || res.data || []);
             })
             .catch((err) => console.error("Error fetching doctors:", err))
@@ -65,8 +64,6 @@ export default function FindDoctorsPage() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* 🔗 এখানে ক্লিক করলে আইডি সহ ডায়নামিক রাউটে নিয়ে যাবে */}
                             <Button
                                 color="primary"
                                 className="w-full mt-5 font-semibold rounded-xl bg-blue-600 text-white"

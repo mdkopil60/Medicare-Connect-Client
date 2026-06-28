@@ -9,14 +9,11 @@ import Swal from 'sweetalert2';
 import { authClient } from '@/lib/auth-client';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-
 export default function DoctorDetailsPage({ params: paramsPromise }) {
     const params = use(paramsPromise);
     const { id } = params;
-
     const { data: session, isPending: sessionLoading } = authClient.useSession();
     const currentUser = session?.user;
-
     const [doctor, setDoctor] = useState(null);
     const [loading, setLoading] = useState(true);
     const [bookingData, setBookingData] = useState({ symptoms: '', selectedDate: '', selectedSlot: '' });
@@ -42,19 +39,16 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
             <p className="mt-4 text-gray-500 font-medium animate-pulse">Loading Premium Profile...</p>
         </div>
     );
-
     if (!doctor) return (
         <div className="text-center py-20 min-h-[60vh] flex flex-col justify-center items-center">
             <p className="text-red-500 font-bold text-2xl">Doctor Not Found!</p>
             <p className="text-gray-400 text-sm mt-2">The requested doctor profile could not be retrieved.</p>
         </div>
     );
-
     return (
         <div className="bg-slate-50/50 dark:bg-slate-950 min-h-screen py-10 transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-
                     {/* Left Side: Doctor Info */}
                     <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6 sm:p-8">
                         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
@@ -66,7 +60,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                     className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl object-cover border-4 border-white dark:border-slate-900 shadow-md"
                                 />
                             </div>
-
                             <div className="flex-1 mt-2 sm:mt-0">
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400 border border-teal-100 dark:border-teal-900/50 uppercase tracking-wider">
                                     {doctor.specialization}
@@ -102,9 +95,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </div>
                             </div>
                         </div>
-
                         <div className="border-t border-slate-100 dark:border-slate-800 my-8"></div>
-
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100/80 dark:border-slate-800/60">
                                 <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400">
@@ -129,7 +120,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 </div>
                             </div>
                         </div>
-
                         {/* Available Slots Section */}
                         {doctor.availableSlots?.length > 0 && (
                             <div className="mt-8">
@@ -204,7 +194,6 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
                                 >
                                     <option value="" disabled>Choose a slot</option>
                                     {doctor.availableSlots?.map((slot, index) => {
-                                        // ✅ object হলে string বানাও
                                         const isObject = typeof slot === 'object' && slot !== null;
                                         const label = isObject
                                             ? `${slot.day} | ${slot.startTime} – ${slot.endTime} (Max: ${slot.maxPatients})`
@@ -290,7 +279,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
             const token = localStorage.getItem('access-token');
             const headers = { headers: { authorization: `Bearer ${token}` } };
 
-            // ১. Payment Intent তৈরি
+            // ১. Payment Intent
             const res = await axios.post(
                 'http://localhost:5000/create-payment-intent',
                 { price: doctor.consultationFee },
@@ -314,8 +303,6 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                 setIsSubmitting(false);
                 return;
             }
-
-            // ৩. Payment সফল — DB তে save
             if (paymentIntent.status === 'succeeded') {
                 const appointmentInfo = {
                     patientId: currentUser.id,
@@ -342,7 +329,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
 
                 if (saveRes.data.success) {
                     Swal.fire({
-                        title: '🎉 Appointment Booked!',
+                        title: ' Appointment Booked!',
                         html: `<p>Your appointment has been confirmed.</p><br/><small>Txn ID: <b>${paymentIntent.id}</b></small>`,
                         icon: 'success',
                         confirmButtonColor: '#0d9488'
