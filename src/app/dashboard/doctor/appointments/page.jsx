@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { Button, Card, Spinner } from '@heroui/react';
-import { FaCheck, FaTimes, FaFilePrescription, FaUser, FaCalendarCheck, FaClock } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaFilePrescription, FaUser, FaCalendarCheck, FaClock, FaExclamationCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
@@ -12,22 +12,28 @@ export default function AppointmentRequestsPage() {
     const { data: session, isPending } = useSession();
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const router = useRouter();
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
     };
+
     const fetchAppointments = async (email) => {
         try {
             setLoading(true);
+            setError(null);
+
+            // ✅ verifyToken ছাড়া সরাসরি fetch
             const res = await axios.get(
-                `http://localhost:5000/doctor/appointments/${email}`,
+                `http://localhost:5000/doctor/appointments/${encodeURIComponent(email)}`,
                 getAuthHeaders()
             );
             setAppointments(res.data || []);
         } catch (err) {
-            console.error("Error fetching appointments:", err);
+            console.error("Fetch error:", err.response?.status, err.response?.data);
+            setError(err.response?.data?.message || err.message);
         } finally {
             setLoading(false);
         }
@@ -35,12 +41,15 @@ export default function AppointmentRequestsPage() {
 
     useEffect(() => {
         if (isPending) return;
-        if (session?.user?.email) {
-            fetchAppointments(session.user.email);
+        const email = session?.user?.email;
+        if (email) {
+            fetchAppointments(email);
+        } else if (!isPending) {
+            setLoading(false);
+            setError("No session found. Please login.");
         }
     }, [session, isPending]);
 
-    // ✅ Fix: /appointments/status/:id — route conflict নেই
     const updateAppointmentStatus = async (id, status) => {
         try {
             const res = await axios.patch(
@@ -56,10 +65,9 @@ export default function AppointmentRequestsPage() {
             }
             return false;
         } catch (err) {
-            console.error('Update error:', err.response?.status, err.response?.data);
             Swal.fire({
                 icon: 'error',
-                title: `Action failed (${err.response?.status || 'Network Error'})`,
+                title: 'Action failed',
                 text: err.response?.data?.message || err.message
             });
             return false;
@@ -80,6 +88,7 @@ export default function AppointmentRequestsPage() {
             }
         });
     };
+
     const handleReject = (id) => {
         Swal.fire({
             title: 'Reject Appointment?',
@@ -121,7 +130,7 @@ export default function AppointmentRequestsPage() {
     };
 
     const getStatusBadge = (status) => {
-        const base = "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ";
+        const base = "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border capitalize ";
         const map = {
             pending: `${base} bg-amber-50 text-amber-700 border-amber-100`,
             confirmed: `${base} bg-teal-50 text-teal-700 border-teal-100`,
@@ -131,6 +140,7 @@ export default function AppointmentRequestsPage() {
         return map[status?.toLowerCase()] || `${base} bg-slate-50 text-slate-700 border-slate-100`;
     };
 
+    // Loading
     if (isPending || loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
@@ -140,9 +150,38 @@ export default function AppointmentRequestsPage() {
         );
     }
 
+    // Error
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+                <div className="p-5 bg-red-50 rounded-full">
+                    <FaExclamationCircle className="text-red-400 text-3xl" />
+                </div>
+                <p className="font-semibold text-slate-700 dark:text-slate-200">
+                    Failed to load appointments
+                </p>
+                <p className="text-xs text-red-400 font-mono bg-red-50 px-3 py-1.5 rounded-lg">
+                    {error}
+                </p>
+                <button
+                    onClick={() => fetchAppointments(session?.user?.email)}
+                    className="px-5 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 transition"
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
+    // Stats
+    const pending = appointments.filter(a => a.appointmentStatus === 'pending').length;
+    const confirmed = appointments.filter(a => a.appointmentStatus === 'confirmed').length;
+    const completed = appointments.filter(a => a.appointmentStatus === 'completed').length;
+
     return (
-        <div className="p-6 max-w-5xl mx-auto min-h-screen">
-            <div className="mb-8">
+        <div className="p-6 max-w-6xl mx-auto min-h-screen">
+            {/* Header */}
+            <div className="mb-6">
                 <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                     <FaCalendarCheck className="text-teal-600" /> Appointment Requests
                 </h1>
@@ -151,7 +190,24 @@ export default function AppointmentRequestsPage() {
                 </p>
             </div>
 
-            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-amber-100 shadow-sm text-center">
+                    <p className="text-2xl font-black text-amber-500">{pending}</p>
+                    <p className="text-xs text-slate-400 mt-1">Pending</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-teal-100 shadow-sm text-center">
+                    <p className="text-2xl font-black text-teal-600">{confirmed}</p>
+                    <p className="text-xs text-slate-400 mt-1">Confirmed</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-blue-100 shadow-sm text-center">
+                    <p className="text-2xl font-black text-blue-600">{completed}</p>
+                    <p className="text-xs text-slate-400 mt-1">Completed</p>
+                </div>
+            </div>
+
+            {/* Table */}
+            <Card className="border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
                 <div className="overflow-x-auto w-full">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -166,7 +222,7 @@ export default function AppointmentRequestsPage() {
                         <tbody>
                             {appointments.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="p-8 text-center text-sm text-slate-400">
+                                    <td colSpan="5" className="p-10 text-center text-sm text-slate-400">
                                         No appointment requests available.
                                     </td>
                                 </tr>
@@ -179,12 +235,17 @@ export default function AppointmentRequestsPage() {
                                         {/* Patient */}
                                         <td className="p-4 pl-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                                                    <FaUser className="text-xs text-slate-500" />
+                                                <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center border border-teal-100">
+                                                    <FaUser className="text-xs text-teal-500" />
                                                 </div>
-                                                <p className="font-semibold text-slate-700 dark:text-slate-200">
-                                                    {apt.patientName || apt.patientEmail}
-                                                </p>
+                                                <div>
+                                                    <p className="font-semibold text-slate-700 dark:text-slate-200">
+                                                        {apt.patientName || apt.patientEmail || apt.patientId || '—'}
+                                                    </p>
+                                                    {apt.patientEmail && (
+                                                        <p className="text-xs text-slate-400">{apt.patientEmail}</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
 
@@ -199,7 +260,7 @@ export default function AppointmentRequestsPage() {
                                         </td>
 
                                         {/* Symptoms */}
-                                        <td className="p-4 text-slate-500 text-xs">
+                                        <td className="p-4 text-slate-500 text-xs max-w-[120px] truncate">
                                             {apt.symptoms || '—'}
                                         </td>
 
@@ -215,34 +276,26 @@ export default function AppointmentRequestsPage() {
                                             <div className="flex justify-center items-center gap-2">
                                                 {apt.appointmentStatus === 'pending' && (
                                                     <>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="flat"
+                                                        <Button size="sm" variant="flat"
                                                             className="text-teal-600 bg-teal-50 font-bold rounded-lg"
                                                             startContent={<FaCheck className="text-xs" />}
-                                                            onClick={() => handleAccept(apt._id)}
-                                                        >
+                                                            onClick={() => handleAccept(apt._id)}>
                                                             Accept
                                                         </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="flat"
+                                                        <Button size="sm" variant="flat"
                                                             className="text-red-600 bg-red-50 font-bold rounded-lg"
                                                             startContent={<FaTimes className="text-xs" />}
-                                                            onClick={() => handleReject(apt._id)}
-                                                        >
+                                                            onClick={() => handleReject(apt._id)}>
                                                             Reject
                                                         </Button>
                                                     </>
                                                 )}
                                                 {apt.appointmentStatus === 'confirmed' && (
-                                                    <Button
-                                                        size="sm"
+                                                    <Button size="sm"
                                                         className="bg-teal-600 text-white font-bold rounded-lg"
                                                         startContent={<FaFilePrescription />}
-                                                        onClick={() => handleComplete(apt._id)}
-                                                    >
-                                                        Mark Completed
+                                                        onClick={() => handleComplete(apt._id)}>
+                                                        Complete
                                                     </Button>
                                                 )}
                                                 {(apt.appointmentStatus === 'completed' || apt.appointmentStatus === 'cancelled') && (

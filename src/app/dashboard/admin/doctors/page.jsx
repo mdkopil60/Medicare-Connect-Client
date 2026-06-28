@@ -8,7 +8,7 @@ import axios from 'axios';
 export default function ManageDoctorsPage() {
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('All'); // All | Pending | Verified
+    const [filter, setFilter] = useState('All');
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem("access-token");
@@ -18,7 +18,11 @@ export default function ManageDoctorsPage() {
     const fetchDoctors = async () => {
         try {
             setLoading(true);
-            const res = await axios.get('http://localhost:5000/doctors', getAuthHeaders());
+            // ✅ admin=true দিয়ে সব doctors (Pending + Verified) fetch
+            const res = await axios.get(
+                'http://localhost:5000/doctors?admin=true&limit=100',
+                getAuthHeaders()
+            );
             setDoctors(res.data.doctors || []);
         } catch (err) {
             console.error(err);
@@ -39,8 +43,15 @@ export default function ManageDoctorsPage() {
         });
         if (!result.isConfirmed) return;
         try {
-            await axios.patch(`http://localhost:5000/doctors/verify/${id}`, {}, getAuthHeaders());
-            setDoctors(prev => prev.map(d => d._id === id ? { ...d, verificationStatus: 'Verified' } : d));
+            await axios.patch(
+                `http://localhost:5000/doctors/verify/${id}`,
+                {},
+                getAuthHeaders()
+            );
+            // ✅ local state update
+            setDoctors(prev =>
+                prev.map(d => d._id === id ? { ...d, verificationStatus: 'Verified' } : d)
+            );
             Swal.fire({ icon: 'success', title: 'Doctor Verified!', timer: 1500, showConfirmButton: false });
         } catch {
             Swal.fire('Error', 'Something went wrong.', 'error');
@@ -58,7 +69,10 @@ export default function ManageDoctorsPage() {
         });
         if (!result.isConfirmed) return;
         try {
-            await axios.delete(`http://localhost:5000/doctors/reject/${id}`, getAuthHeaders());
+            await axios.delete(
+                `http://localhost:5000/doctors/reject/${id}`,
+                getAuthHeaders()
+            );
             setDoctors(prev => prev.filter(d => d._id !== id));
             Swal.fire({ icon: 'success', title: 'Doctor Removed!', timer: 1500, showConfirmButton: false });
         } catch {
@@ -66,13 +80,19 @@ export default function ManageDoctorsPage() {
         }
     };
 
+    // ✅ case-insensitive filter
     const filteredDoctors = doctors.filter(d => {
         if (filter === 'All') return true;
-        return d.verificationStatus === filter;
+        return d.verificationStatus?.toLowerCase() === filter.toLowerCase();
     });
 
-    const pendingCount = doctors.filter(d => d.verificationStatus === 'Pending').length;
-    const verifiedCount = doctors.filter(d => d.verificationStatus === 'Verified').length;
+    const pendingCount = doctors.filter(d =>
+        d.verificationStatus?.toLowerCase() === 'pending'
+    ).length;
+
+    const verifiedCount = doctors.filter(d =>
+        d.verificationStatus?.toLowerCase() === 'verified'
+    ).length;
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -87,20 +107,24 @@ export default function ManageDoctorsPage() {
                 <h2 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
                     <FaUserMd className="text-teal-600" /> Manage Doctors
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">Review and manage doctor verification status</p>
+                <p className="text-xs text-slate-400 mt-1">
+                    Review and manage doctor verification status
+                </p>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
-                    <p className="text-2xl font-black text-slate-700 dark:text-white">{doctors.length}</p>
+                    <p className="text-2xl font-black text-slate-700 dark:text-white">
+                        {doctors.length}
+                    </p>
                     <p className="text-xs text-slate-400 mt-1">Total Doctors</p>
                 </div>
-                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-yellow-100 dark:border-slate-800 shadow-sm text-center">
                     <p className="text-2xl font-black text-yellow-500">{pendingCount}</p>
                     <p className="text-xs text-slate-400 mt-1">Pending Review</p>
                 </div>
-                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-teal-100 dark:border-slate-800 shadow-sm text-center">
                     <p className="text-2xl font-black text-teal-600">{verifiedCount}</p>
                     <p className="text-xs text-slate-400 mt-1">Verified</p>
                 </div>
@@ -149,14 +173,24 @@ export default function ManageDoctorsPage() {
                                 </tr>
                             ) : (
                                 filteredDoctors.map(d => (
-                                    <tr key={d._id} className="border-b border-slate-100 dark:border-slate-800/60 last:border-0 hover:bg-slate-50/50 text-sm">
+                                    <tr
+                                        key={d._id}
+                                        className="border-b border-slate-100 dark:border-slate-800/60 last:border-0 hover:bg-slate-50/50 text-sm"
+                                    >
+                                        {/* Doctor Name */}
                                         <td className="p-4 pl-6 font-semibold text-slate-700 dark:text-slate-200">
                                             {d.doctorName}
                                         </td>
+
+                                        {/* Specialty */}
                                         <td className="p-4 text-slate-500">{d.specialization}</td>
+
+                                        {/* Hospital */}
                                         <td className="p-4 text-slate-500">{d.hospitalName || '—'}</td>
+
+                                        {/* Status */}
                                         <td className="p-4">
-                                            {d.verificationStatus === 'Verified' ? (
+                                            {d.verificationStatus?.toLowerCase() === 'verified' ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 text-xs font-semibold border border-teal-100">
                                                     <FaCheck className="text-[10px]" /> Verified
                                                 </span>
@@ -166,9 +200,12 @@ export default function ManageDoctorsPage() {
                                                 </span>
                                             )}
                                         </td>
+
+                                        {/* Actions */}
                                         <td className="p-4 text-center pr-6">
                                             <div className="flex justify-center items-center gap-2">
-                                                {d.verificationStatus !== 'Verified' && (
+                                                {/* ✅ Pending হলে Verify button দেখাও */}
+                                                {d.verificationStatus?.toLowerCase() !== 'verified' && (
                                                     <Button
                                                         size="sm"
                                                         className="bg-teal-600 text-white rounded-lg font-semibold"
