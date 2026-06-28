@@ -46,7 +46,6 @@ export default function DoctorOverview() {
     };
 
     useEffect(() => {
-        // isPending=true মানে session এখনো load হচ্ছে — wait করো
         if (!isPending) {
             fetchStats();
         }
@@ -64,7 +63,7 @@ export default function DoctorOverview() {
             <div className="p-5 bg-red-50 rounded-full">
                 <FaExclamationTriangle className="text-red-400 text-3xl" />
             </div>
-            <p className="font-semibold text-slate-700 dark:text-slate-200">Dashboard load হয়নি</p>
+            <p className="font-semibold text-slate-700 dark:text-slate-200">Dashboard load</p>
             {error && (
                 <p className="text-xs text-red-400 mt-1 font-mono bg-red-50 px-3 py-1.5 rounded-lg">
                     {error}
@@ -72,7 +71,7 @@ export default function DoctorOverview() {
             )}
             <button onClick={fetchStats}
                 className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
-                <FaRedo className="text-xs" /> আবার চেষ্টা করুন
+                <FaRedo className="text-xs" /> 
             </button>
         </div>
     );

@@ -9,6 +9,7 @@ import { EyeFilledIcon, EyeSlashFilledIcon } from "@/components/Icons";
 import { signUp } from "@/lib/auth-client";
 
 
+
 export default function RegisterPage() {
     const [role, setRole] = useState("Patient");
     const [gender, setGender] = useState("male");
