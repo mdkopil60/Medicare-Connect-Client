@@ -9,6 +9,8 @@ import Swal from 'sweetalert2';
 import { authClient } from '@/lib/auth-client';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function DoctorDetailsPage({ params: paramsPromise }) {
     const params = use(paramsPromise);
     const { id } = params;
@@ -22,7 +24,7 @@ export default function DoctorDetailsPage({ params: paramsPromise }) {
     useEffect(() => {
         if (!id) return;
         setLoading(true);
-        axios.get(`http://localhost:5000/doctors/${id}`)
+        axios.get(`${API_URL}/doctors/${id}`)
             .then(res => {
                 setDoctor(res.data);
                 setLoading(false);
@@ -281,7 +283,7 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
 
             // ১. Payment Intent
             const res = await axios.post(
-                'http://localhost:5000/create-payment-intent',
+                `${API_URL}/create-payment-intent`,
                 { price: doctor.consultationFee },
                 headers
             );
@@ -322,14 +324,14 @@ function CheckoutForm({ doctor, bookingData, currentUser, isSubmitting, setIsSub
                 };
 
                 const saveRes = await axios.post(
-                    'http://localhost:5000/appointments',
+                    `${API_URL}/appointments`,
                     appointmentInfo,
                     headers
                 );
 
                 if (saveRes.data.success) {
                     Swal.fire({
-                        title: ' Appointment Booked!',
+                        title: 'Appointment Booked!',
                         html: `<p>Your appointment has been confirmed.</p><br/><small>Txn ID: <b>${paymentIntent.id}</b></small>`,
                         icon: 'success',
                         confirmButtonColor: '#0d9488'

@@ -6,13 +6,15 @@ import { Card, Button, Spinner } from "@heroui/react";
 import { User, MapPin, DollarSign } from "lucide-react";
 import axios from "axios";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function FindDoctorsPage() {
     const router = useRouter();
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get("http://localhost:5000/doctors?limit=20")
+        axios.get(`${API_URL}/doctors?limit=20`)
             .then((res) => {
                 setDoctors(res.data?.doctors || res.data || []);
             })
