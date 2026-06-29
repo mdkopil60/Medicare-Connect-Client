@@ -4,7 +4,7 @@ import { Card, Button, Spinner } from '@heroui/react';
 import { FaUserMd, FaCheck, FaTimes, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export default function ManageDoctorsPage() {
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,9 +18,8 @@ export default function ManageDoctorsPage() {
     const fetchDoctors = async () => {
         try {
             setLoading(true);
-            // ✅ admin=true দিয়ে সব doctors (Pending + Verified) fetch
             const res = await axios.get(
-                'http://localhost:5000/doctors?admin=true&limit=100',
+                `${API_URL}/doctors?admin=true&limit=100`,
                 getAuthHeaders()
             );
             setDoctors(res.data.doctors || []);
@@ -44,11 +43,10 @@ export default function ManageDoctorsPage() {
         if (!result.isConfirmed) return;
         try {
             await axios.patch(
-                `http://localhost:5000/doctors/verify/${id}`,
+                `${API_URL}/doctors/verify/${id}`,
                 {},
                 getAuthHeaders()
             );
-            // ✅ local state update
             setDoctors(prev =>
                 prev.map(d => d._id === id ? { ...d, verificationStatus: 'Verified' } : d)
             );
@@ -70,7 +68,7 @@ export default function ManageDoctorsPage() {
         if (!result.isConfirmed) return;
         try {
             await axios.delete(
-                `http://localhost:5000/doctors/reject/${id}`,
+                `${API_URL}/doctors/reject/${id}`,
                 getAuthHeaders()
             );
             setDoctors(prev => prev.filter(d => d._id !== id));
@@ -80,7 +78,6 @@ export default function ManageDoctorsPage() {
         }
     };
 
-    // ✅ case-insensitive filter
     const filteredDoctors = doctors.filter(d => {
         if (filter === 'All') return true;
         return d.verificationStatus?.toLowerCase() === filter.toLowerCase();

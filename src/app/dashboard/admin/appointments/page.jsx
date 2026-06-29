@@ -5,6 +5,7 @@ import { Card, Button, Spinner } from '@heroui/react';
 import { FaCalendarCheck, FaTrash, FaCheck, FaTimes, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const STATUS_STYLES = {
     pending: 'bg-yellow-50 text-yellow-700 border-yellow-100',
@@ -33,7 +34,7 @@ export default function AdminAppointmentsPage() {
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const res = await axios.get('http://localhost:5000/appointments', getAuthHeaders());
+            const res = await axios.get(`${API_URL}/appointments`, getAuthHeaders());
             setAppointments(res.data || []);
         } catch (err) {
             console.error(err);
@@ -56,7 +57,7 @@ export default function AdminAppointmentsPage() {
         if (!result.isConfirmed) return;
         try {
             await axios.patch(
-                `http://localhost:5000/appointments/status/${id}`,
+                `${API_URL}/appointments/status/${id}`,
                 { status: newStatus },
                 getAuthHeaders()
             );
@@ -80,7 +81,7 @@ export default function AdminAppointmentsPage() {
         });
         if (!result.isConfirmed) return;
         try {
-            await axios.delete(`http://localhost:5000/appointments/${id}`, getAuthHeaders());
+            await axios.delete(`${API_URL}/appointments/${id}`, getAuthHeaders());
             setAppointments(prev => prev.filter(a => a._id !== id));
             Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
         } catch {

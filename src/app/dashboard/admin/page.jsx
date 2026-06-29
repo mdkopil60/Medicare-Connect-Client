@@ -7,6 +7,7 @@ import {
     FaExclamationTriangle, FaRedo, FaStethoscope,
     FaCheckCircle, FaRegCalendarCheck
 } from 'react-icons/fa';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function DoctorOverview() {
     const { data: session, isPending } = authClient.useSession();
@@ -29,7 +30,7 @@ export default function DoctorOverview() {
             setLoading(true);
             setError(null);
             const res = await fetch(
-                `http://localhost:5000/doctor/dashboard-stats?email=${encodeURIComponent(email)}`
+                `${API_URL}/doctor/dashboard-stats?email=${encodeURIComponent(email)}`
             );
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));

@@ -5,6 +5,7 @@ import { Card, Spinner } from '@heroui/react';
 import { FaCreditCard, FaCheckCircle, FaClock } from 'react-icons/fa';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function PaymentManagementPage() {
     const [payments, setPayments] = useState([]);
@@ -19,7 +20,7 @@ export default function PaymentManagementPage() {
         const fetchPayments = async () => {
             try {
                 setLoading(true);
-                const res = await axios.get('http://localhost:5000/payments', getAuthHeaders());
+                const res = await axios.get(`${API_URL}/payments`, getAuthHeaders());
                 setPayments(res.data || []);
             } catch (err) {
                 console.error("Error loading payments:", err);

@@ -4,6 +4,7 @@ import { Card, Button, Spinner, Chip } from '@heroui/react';
 import { FaBan, FaCheckCircle, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ManageUsersPage() {
     const [users, setUsers] = useState([]);
@@ -12,7 +13,7 @@ export default function ManageUsersPage() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const res = await axios.get('http://localhost:5000/users');
+            const res = await axios.get(`${API_URL}/users`);
             setUsers(res.data);
         } catch (err) {
             console.error('fetch error:', err);
@@ -27,13 +28,12 @@ export default function ManageUsersPage() {
 
     // Status toggle — active ↔ suspended
     const toggleStatus = async (id, currentStatus) => {
-        // ✅ lowercase check করা হয়েছে (Better Auth lowercase store করে)
         const isActive = currentStatus?.toLowerCase() === 'active';
         const nextStatus = isActive ? 'suspended' : 'active';
 
         try {
             const res = await axios.patch(
-                `http://localhost:5000/users/status/${id}`,
+                `${API_URL}/users/status/${id}`,
                 { status: nextStatus }
             );
 
@@ -67,7 +67,7 @@ export default function ManageUsersPage() {
         if (!confirm.isConfirmed) return;
 
         try {
-            const res = await axios.delete(`http://localhost:5000/users/${id}`);
+            const res = await axios.delete(`${API_URL}/users/${id}`);
             if (res.data.deletedCount > 0) {
                 setUsers(prev => prev.filter(u => u._id !== id));
                 Swal.fire({
