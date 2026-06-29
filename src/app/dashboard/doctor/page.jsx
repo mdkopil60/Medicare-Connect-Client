@@ -1,18 +1,17 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { Card, Skeleton } from "@heroui/react";
 import { Users, Calendar, Star } from "lucide-react";
-import { useSession } from "@/lib/auth-client"; // ✅ session থেকে email নিন
+import { useSession } from "@/lib/auth-client"; 
 import axios from "axios";
 import Swal from "sweetalert2";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function DoctorOverview() {
     const { data: session, isPending } = useSession();
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // ✅ token নেওয়ার helper — AppointmentRequestsPage এর মতো
     const getAuthHeaders = () => {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
@@ -26,8 +25,8 @@ export default function DoctorOverview() {
             try {
                 setLoading(true);
                 const res = await axios.get(
-                    `http://localhost:5000/doctor/dashboard-stats`,
-                    getAuthHeaders() // ✅ সঠিক header
+                    `${API_URL}/doctor/dashboard-stats`,
+                    getAuthHeaders() 
                 );
                 setStatsData(res.data);
             } catch (err) {
@@ -46,7 +45,7 @@ export default function DoctorOverview() {
         };
 
         fetchDashboardStats();
-    }, [session, isPending]); // ✅ session ready হলে fetch করো
+    }, [session, isPending]); 
 
     const statsConfig = [
         {

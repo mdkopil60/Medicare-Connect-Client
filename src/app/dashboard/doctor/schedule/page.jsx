@@ -6,7 +6,7 @@ import { Button, Card, Spinner } from '@heroui/react';
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function ManageSchedulePage() {
@@ -23,7 +23,7 @@ export default function ManageSchedulePage() {
         try {
             setLoading(true);
             const res = await axios.get(
-                `http://localhost:5000/doctor/schedule/${email}`,
+                `${API_URL}/doctor/schedule/${email}`,
                 getAuthHeaders()
             );
             setSlots(res.data?.availableSlots || []);
@@ -98,13 +98,13 @@ export default function ManageSchedulePage() {
             try {
                 if (isEditMode) {
                     await axios.patch(
-                        `http://localhost:5000/doctor/schedule/slot/${email}/${slot._id}`,
+                        `${API_URL}/doctor/schedule/slot/${email}/${slot._id}`,
                         result.value,
                         getAuthHeaders()
                     );
                 } else {
                     await axios.post(
-                        `http://localhost:5000/doctor/schedule/slot/${email}`,
+                        `${API_URL}/doctor/schedule/slot/${email}`,
                         result.value,
                         getAuthHeaders()
                     );
@@ -130,7 +130,7 @@ export default function ManageSchedulePage() {
             if (result.isConfirmed) {
                 try {
                     await axios.delete(
-                        `http://localhost:5000/doctor/schedule/slot/${email}/${slotId}`,
+                        `${API_URL}/doctor/schedule/slot/${email}/${slotId}`,
                         getAuthHeaders()
                     );
                     setSlots(prev => prev.filter(item => item._id !== slotId));

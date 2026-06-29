@@ -111,7 +111,6 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
-                            {/* ডাইনামিক রোল ফিল্ড (যদি আপনার ডাটাতে এক্সট্রা প্রোপার্টি থাকে) */}
                             {user.phoneNumber && (
                                 <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800/60 flex items-start gap-3 md:col-span-2">
                                     <Activity className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />

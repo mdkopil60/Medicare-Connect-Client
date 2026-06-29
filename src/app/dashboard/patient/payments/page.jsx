@@ -5,7 +5,7 @@ import { Card, Chip, Button, Input, Spinner } from "@heroui/react";
 import { Calendar, CreditCard, CheckCircle2, DollarSign, Search, Receipt } from "lucide-react";
 import axios from "axios";
 import { authClient } from "@/lib/auth-client";
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function PaymentHistoryPage() {
     const { data: session, isPending } = authClient.useSession();
@@ -21,7 +21,7 @@ export default function PaymentHistoryPage() {
                 const token = localStorage.getItem("access-token");
 
                 const res = await axios.get(
-                    `http://localhost:5000/patient/payments/${user.email}`,
+                    `${API_URL}/patient/payments/${user.email}`,
                   
                 );
 
@@ -46,7 +46,6 @@ export default function PaymentHistoryPage() {
         );
     });
 
-    // Session লোড বা payment fetch চলাকালীন spinner দেখাও
     if (isPending || loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh]">

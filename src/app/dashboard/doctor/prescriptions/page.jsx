@@ -7,9 +7,9 @@ import { Button, Card, Spinner } from '@heroui/react';
 import { FaPlus, FaEdit, FaTrash, FaFilePrescription, FaNotesMedical } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 export default function PrescriptionManagementPage() {
-    const { data: session, isPending } = useSession(); // ✅ Better Auth
+    const { data: session, isPending } = useSession(); 
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const searchParams = useSearchParams();
@@ -20,12 +20,11 @@ export default function PrescriptionManagementPage() {
         return { headers: { authorization: `Bearer ${token}` } };
     };
 
-    // ✅ doctor email দিয়ে prescriptions fetch
     const fetchPrescriptions = async (email) => {
         try {
             setLoading(true);
             const res = await axios.get(
-                `http://localhost:5000/prescriptions?doctorEmail=${email}`, // ✅ fixed URL
+                `${API_URL}/prescriptions?doctorEmail=${email}`, 
                 getAuthHeaders()
             );
             setPrescriptions(res.data || []);
@@ -112,14 +111,13 @@ export default function PrescriptionManagementPage() {
 
             const payload = {
                 ...result.value,
-                doctorEmail: email, // ✅ doctor email save হবে
+                doctorEmail: email, 
             };
 
             try {
                 if (isEditMode) {
-                    // ✅ Update
                     await axios.patch(
-                        `http://localhost:5000/prescriptions/${prescription._id}`,
+                        `${API_URL}/prescriptions/${prescription._id}`,
                         payload,
                         getAuthHeaders()
                     );
@@ -127,9 +125,8 @@ export default function PrescriptionManagementPage() {
                     fetchPrescriptions(email);
                     Swal.fire({ icon: 'success', title: 'Updated!', timer: 1500, showConfirmButton: false });
                 } else {
-                    // ✅ Create
                     const res = await axios.post(
-                        'http://localhost:5000/prescriptions',
+                        `${API_URL}/prescriptions`,
                         payload,
                         getAuthHeaders()
                     );
@@ -156,7 +153,7 @@ export default function PrescriptionManagementPage() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await axios.delete(`http://localhost:5000/prescriptions/${id}`, getAuthHeaders());
+                    await axios.delete(`${API_URL}/prescriptions/${id}`, getAuthHeaders());
                     setPrescriptions(prev => prev.filter(item => item._id !== id));
                     Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1500, showConfirmButton: false });
                 } catch (err) {

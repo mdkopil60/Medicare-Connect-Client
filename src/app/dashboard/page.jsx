@@ -22,7 +22,6 @@ export default async function DashboardPage() {
 
     if (role === 'Doctor') redirect('/dashboard/doctor');
     if (role === 'Patient') redirect('/dashboard/patient');
-    // app/dashboard/page.jsx এ যোগ করুন
     if (session.user.email === 'admin@medicare.com') {
         redirect('/dashboard/admin');
     }

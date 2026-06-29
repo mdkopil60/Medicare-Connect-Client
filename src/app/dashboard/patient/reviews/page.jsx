@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Card, Button, Input, TextArea, Spinner } from "@heroui/react";
 import Swal from 'sweetalert2';
 import { FaTrash, FaEdit, FaStar, FaTimes, FaPen } from 'react-icons/fa';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function MyReviewsPage() {
     const [reviews, setReviews] = useState([]);
@@ -11,21 +12,18 @@ export default function MyReviewsPage() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [selectedReview, setSelectedReview] = useState(null);
 
-    // নতুন রিভিউ দেওয়ার ফর্ম স্টেট
+
     const [newReviewData, setNewReviewData] = useState({ doctorName: '', specialty: '', rating: 5, comment: '' });
-    // এডিট বা আপডেট করার ফর্ম স্টেট
     const [editFormData, setEditFormData] = useState({ doctorName: '', specialty: '', rating: 5, comment: '' });
 
-    // টোকেন গেটার ফাংশন (অথেন্টিকেশনের জন্য)
     const getAuthHeaders = () => {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
     };
 
-    // সব রিভিউ ফেচ করার ফাংশন
     const fetchReviews = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/reviews/my-reviews', getAuthHeaders());
+            const res = await axios.get(`${API_URL}/reviews/my-reviews`, getAuthHeaders());
             setReviews(res.data || []);
         } catch (err) {
             console.error("Error fetching reviews:", err);
@@ -35,8 +33,6 @@ export default function MyReviewsPage() {
     };
 
     useEffect(() => { fetchReviews(); }, []);
-
-    // ১. নতুন রিভিউ তৈরি বা সাবমিট করার ফাংশন
     const handleCreateReview = async (e) => {
         e.preventDefault();
         if (!newReviewData.doctorName || !newReviewData.comment) {
@@ -45,20 +41,16 @@ export default function MyReviewsPage() {
         }
 
         try {
-            // ব্যাকএন্ডে ডাটা পাঠানো হচ্ছে
-            await axios.post('http://localhost:5000/reviews', newReviewData, getAuthHeaders());
+            await axios.post(`${API_URL}/reviews`, newReviewData, getAuthHeaders());
             Swal.fire('Success!', 'Your review has been published.', 'success');
 
-            // ফর্ম রিসেট করা
             setNewReviewData({ doctorName: '', specialty: '', rating: 5, comment: '' });
-            // তালিকা আপডেট করা
             fetchReviews();
         } catch (err) {
             Swal.fire('Error', 'Failed to submit review.', 'error');
         }
     };
 
-    // এডিট মোডাল ওপেন করা
     const handleEditClick = (review) => {
         setSelectedReview(review);
         setEditFormData({
@@ -70,10 +62,9 @@ export default function MyReviewsPage() {
         setIsEditOpen(true);
     };
 
-    // ২. রিভিউ আপডেট বা সেভ করার ফাংশন
     const handleUpdateSave = async () => {
         try {
-            await axios.put(`http://localhost:5000/reviews/${selectedReview._id}`, editFormData, getAuthHeaders());
+            await axios.put(`${API_URL}/reviews/${selectedReview._id}`, editFormData, getAuthHeaders());
             Swal.fire('Updated!', 'Review updated successfully.', 'success');
             setIsEditOpen(false);
             fetchReviews();
@@ -82,7 +73,6 @@ export default function MyReviewsPage() {
         }
     };
 
-    // ৩. রিভিউ ডিলিট করার ফাংশন
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: 'Are you sure?',
@@ -94,7 +84,7 @@ export default function MyReviewsPage() {
 
         if (result.isConfirmed) {
             try {
-                await axios.delete(`http://localhost:5000/reviews/${id}`, getAuthHeaders());
+                await axios.delete(`${API_URL}/reviews/${id}`, getAuthHeaders());
                 setReviews(reviews.filter(r => r._id !== id));
                 Swal.fire('Deleted!', 'Your review has been deleted.', 'success');
             } catch (err) {
@@ -108,7 +98,6 @@ export default function MyReviewsPage() {
     return (
         <div className="p-6 max-w-6xl mx-auto min-h-screen flex flex-col gap-10">
 
-            {/* ──── সেকশন ১: WRITE A REVIEW FORM ──── */}
             <Card className="p-6 border border-purple-100 shadow-md max-w-2xl bg-white dark:bg-zinc-900">
                 <div className="flex items-center gap-2 mb-4">
                     <FaPen className="text-purple-600" />
@@ -155,7 +144,6 @@ export default function MyReviewsPage() {
 
             <hr className="border-slate-200" />
 
-            {/* ──── সেকশন ২: MY REVIEWS LIST ──── */}
             <div>
                 <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">My Reviews</h1>
 
@@ -185,7 +173,6 @@ export default function MyReviewsPage() {
                 )}
             </div>
 
-            {/* ──── সেকশন ৩: কাস্টম এডিট মোডাল ──── */}
             {isEditOpen && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsEditOpen(false)} />

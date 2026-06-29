@@ -6,7 +6,7 @@ import { Card, Spinner } from '@heroui/react';
 import { FaSave, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const SPECIALIZATIONS = [
     'Cardiologist', 'Pediatrician', 'Neurologist', 'Orthopedic Surgeon',
@@ -33,13 +33,11 @@ export default function DoctorProfilePage() {
         const token = localStorage.getItem("access-token");
         return { headers: { authorization: `Bearer ${token}` } };
     };
-
-    // ডাটাবেজ থেকে doctor profile লোড
     useEffect(() => {
         if (isPending || !session?.user?.email) return;
         const email = session.user.email;
 
-        axios.get(`http://localhost:5000/doctor/profile/${email}`, getAuthHeaders())
+        axios.get(`${API_URL}/doctor/profile/${email}`, getAuthHeaders())
             .then(res => {
                 const d = res.data;
                 setForm({
@@ -106,7 +104,7 @@ export default function DoctorProfilePage() {
         try {
             setSaving(true);
             await axios.put(
-                `http://localhost:5000/doctor/profile/${email}`,
+                `${API_URL}/doctor/profile/${email}`,
                 form,
                 getAuthHeaders()
             );
@@ -128,7 +126,7 @@ export default function DoctorProfilePage() {
         <div className="max-w-3xl mx-auto p-6 space-y-5">
             <div>
                 <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Profile management</h1>
-                <p className="text-sm text-slate-400 mt-1">তথ্য আপডেট করুন — সরাসরি ডাটাবেজে সেভ হবে</p>
+                <p className="text-sm text-slate-400 mt-1">UPDATE</p>
             </div>
 
             {/* Basic Info */}

@@ -5,10 +5,10 @@ import { Card, Button, Chip, Input } from "@heroui/react";
 import { Calendar, Clock, XCircle, Edit2, User, X } from "lucide-react";
 import axios from "axios";
 import { authClient } from "@/lib/auth-client";
-// ✅ Better Auth
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AppointmentsPage() {
-    const { data: session, isPending: sessionLoading } = authClient.useSession(); // ✅ Better Auth session
+    const { data: session, isPending: sessionLoading } = authClient.useSession();
     const user = session?.user;
 
     const [appointments, setAppointments] = useState([]);
@@ -18,7 +18,6 @@ export default function AppointmentsPage() {
     const [newDate, setNewDate] = useState("");
     const [newTime, setNewTime] = useState("");
 
-    // ১. Better Auth session থেকে real user email দিয়ে appointments fetch করা
     useEffect(() => {
         if (user?.email) {
             fetchAppointments(user.email);
@@ -30,7 +29,7 @@ export default function AppointmentsPage() {
             setLoading(true);
             const token = localStorage.getItem("access-token");
             const response = await axios.get(
-                `http://localhost:5000/patient/appointments/${email}`, // ✅ real email
+                `${API_URL}/patient/appointments/${email}`, 
                 {
                     headers: {
                         authorization: `Bearer ${token}`,
@@ -58,7 +57,7 @@ export default function AppointmentsPage() {
         try {
             const token = localStorage.getItem("access-token");
             const response = await axios.patch(
-                `http://localhost:5000/appointments/reschedule/${selectedAppt._id}`,
+                `${API_URL}/appointments/reschedule/${selectedAppt._id}`,
                 {
                     appointmentDate: newDate,
                     appointmentTime: newTime,
@@ -83,7 +82,7 @@ export default function AppointmentsPage() {
             try {
                 const token = localStorage.getItem("access-token");
                 const response = await axios.patch(
-                    `http://localhost:5000/appointments/cancel/${id}`,
+                    `${API_URL}/appointments/cancel/${id}`,
                     {},
                     {
                         headers: { authorization: `Bearer ${token}` },
@@ -99,7 +98,6 @@ export default function AppointmentsPage() {
         }
     };
 
-    // Session লোড হচ্ছে অথবা Appointments লোড হচ্ছে
     if (sessionLoading || loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -108,7 +106,6 @@ export default function AppointmentsPage() {
         );
     }
 
-    // User logged in না থাকলে
     if (!user) {
         return (
             <div className="flex items-center justify-center min-h-screen">

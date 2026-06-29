@@ -7,6 +7,7 @@ import { Button, Card, Spinner } from '@heroui/react';
 import { FaCheck, FaTimes, FaFilePrescription, FaUser, FaCalendarCheck, FaClock, FaExclamationCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AppointmentRequestsPage() {
     const { data: session, isPending } = useSession();
@@ -24,10 +25,8 @@ export default function AppointmentRequestsPage() {
         try {
             setLoading(true);
             setError(null);
-
-            // ✅ verifyToken ছাড়া সরাসরি fetch
             const res = await axios.get(
-                `http://localhost:5000/doctor/appointments/${encodeURIComponent(email)}`,
+                `${API_URL}/doctor/appointments/${encodeURIComponent(email)}`,
                 getAuthHeaders()
             );
             setAppointments(res.data || []);
@@ -53,7 +52,7 @@ export default function AppointmentRequestsPage() {
     const updateAppointmentStatus = async (id, status) => {
         try {
             const res = await axios.patch(
-                `http://localhost:5000/appointments/status/${id}`,
+                `${API_URL}/appointments/status/${id}`,
                 { status },
                 getAuthHeaders()
             );

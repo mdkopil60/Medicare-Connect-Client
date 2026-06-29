@@ -1,11 +1,11 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import { Card, Avatar, Button, Spinner } from "@heroui/react";
 import { CalendarClock, History, CreditCard, Heart, Star, ArrowUpRight } from 'lucide-react';
 import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const PatientDashboardHomepage = () => {
     const { data: session, isPending: isSessionPending } = useSession();
@@ -31,8 +31,8 @@ const PatientDashboardHomepage = () => {
                 const headers = { authorization: `Bearer ${token}` };
 
                 const [statsRes, doctorsRes] = await Promise.all([
-                    axios.get(`http://localhost:5000/patient/dashboard-stats/${email}`, { headers }),
-                    axios.get(`http://localhost:5000/patient/favorite-doctors/${email}`, { headers })
+                    axios.get(`${API_URL}/patient/dashboard-stats/${email}`, { headers }),
+                    axios.get(`${API_URL}/patient/favorite-doctors/${email}`, { headers })
                 ]);
 
                 setStatsData(statsRes.data);
@@ -102,14 +102,13 @@ const PatientDashboardHomepage = () => {
             {/* Welcome */}
             <div className="flex flex-col gap-1">
                 <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-                    Welcome Back, {user?.name || 'Patient'} 👋
+                    Welcome Back, {user?.name || 'Patient'} 
                 </h2>
                 <p className="text-sm text-default-400">
                     Here is a quick overview of your health dashboard activities.
                 </p>
             </div>
 
-            {/* Stats Cards — ✅ isPressable ও onPress সরিয়ে div দিয়ে করা হয়েছে */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                 {stats.map((stat, index) => (
                     <div
@@ -177,7 +176,6 @@ const PatientDashboardHomepage = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        {/* ✅ Button এ onClick ব্যবহার করা হয়েছে, onPress নয় */}
                                         <Button
                                             isIconOnly
                                             variant="light"
