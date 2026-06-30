@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, Skeleton } from "@heroui/react";
 import { Users, Calendar, Star } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client"; 
 import axios from "axios";
 import Swal from "sweetalert2";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -25,8 +25,8 @@ export default function DoctorOverview() {
             try {
                 setLoading(true);
                 const res = await axios.get(
-                    `${API_URL}/doctor/dashboard-stats?email=${session.user.email}`,
-                    getAuthHeaders()
+                    `${API_URL}/doctor/dashboard-stats`,
+                    getAuthHeaders() 
                 );
                 setStatsData(res.data);
             } catch (err) {
@@ -34,7 +34,6 @@ export default function DoctorOverview() {
                 Swal.fire({
                     icon: 'error',
                     title: 'Failed to load stats',
-                    text: err.response?.data?.message || 'Please try again later',
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -46,7 +45,7 @@ export default function DoctorOverview() {
         };
 
         fetchDashboardStats();
-    }, [session, isPending]);
+    }, [session, isPending]); 
 
     const statsConfig = [
         {
