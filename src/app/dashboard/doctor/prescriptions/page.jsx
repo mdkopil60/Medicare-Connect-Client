@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSession } from '@/lib/auth-client'; // ✅ Better Auth
+import { useSession } from '@/lib/auth-client'; 
 import { Button, Card, Spinner } from '@heroui/react';
 import { FaPlus, FaEdit, FaTrash, FaFilePrescription, FaNotesMedical } from 'react-icons/fa';
 import Swal from 'sweetalert2';
@@ -42,7 +42,6 @@ export default function PrescriptionManagementPage() {
         }
     }, [session, isPending]);
 
-    // appointmentId query থেকে এলে auto popup
     useEffect(() => {
         if (appointmentIdFromQuery && !loading) {
             const timer = setTimeout(() => {
@@ -121,7 +120,6 @@ export default function PrescriptionManagementPage() {
                         payload,
                         getAuthHeaders()
                     );
-                    // re-fetch করো updated data পেতে
                     fetchPrescriptions(email);
                     Swal.fire({ icon: 'success', title: 'Updated!', timer: 1500, showConfirmButton: false });
                 } else {
